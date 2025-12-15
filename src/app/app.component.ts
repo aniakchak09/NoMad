@@ -1,10 +1,14 @@
 import { Component, OnInit } from '@angular/core';
 import { NavigationEnd, Event, Router } from '@angular/router';
 import { AuthService } from './services/auth.service'; // ajustează calea dacă e altfel
+import { FormsModule } from '@angular/forms';
+import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
+
 
 interface ITab {
   name: string;
   link: string;
+
 }
 
 @Component({
@@ -22,6 +26,10 @@ export class AppComponent implements OnInit {
     {
       name: 'Map',
       link: '/map'
+    },
+    {
+      name: 'Itinerary Test',
+      link: '/itinerary-test'
     }
   ];
 
@@ -42,7 +50,7 @@ export class AppComponent implements OnInit {
   ngOnInit(): void {
     // test simplu: creează un user demo și scrie în DB
     // după ce vezi că merge, poți comenta linia asta
-    this.authService.testSignUp();
+    // this.authService.testSignUp();
   }
 
   // See app.component.html
