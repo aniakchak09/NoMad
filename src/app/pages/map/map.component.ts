@@ -10,11 +10,9 @@ import {
 
 import esri = __esri; // Esri TypeScript Types
 
-import Config from '@arcgis/core/config';
-import WebMap from '@arcgis/core/WebMap';
+// Am eliminat: Config, WebMap, Bookmarks, Expand
+import Map from '@arcgis/core/Map'; // Folosim Map
 import MapView from '@arcgis/core/views/MapView';
-import Bookmarks from '@arcgis/core/widgets/Bookmarks';
-import Expand from '@arcgis/core/widgets/Expand';
 
 import GraphicsLayer from "@arcgis/core/layers/GraphicsLayer";
 import Graphic from '@arcgis/core/Graphic';
@@ -41,11 +39,14 @@ export class MapComponent implements OnInit, OnDestroy {
   graphicsLayer: esri.GraphicsLayer;
   graphicsLayerUserPoints: esri.GraphicsLayer;
   graphicsLayerRoutes: esri.GraphicsLayer;
-  trailheadsLayer: esri.FeatureLayer;
+  
+  // Am redenumit trailheadsLayer în poiLayer
+  poiLayer: esri.FeatureLayer; 
 
-  zoom = 10;
-  center: Array<number> = [-118.73682450024377, 34.07817583063242];
-  basemap = "streets-vector";
+  // Centrul pe București (Long, Lat) și zoom-ul
+  zoom = 12; 
+  center: Array<number> = [26.1025, 44.4268]; 
+  basemap = "osm"; // OpenStreetMap, basemap neutru
   loaded = false;
   directionsElement: any;
 
@@ -60,16 +61,20 @@ export class MapComponent implements OnInit, OnDestroy {
 
   async initializeMap() {
     try {
-      Config.apiKey = "YOUR_API_KEY";
+      // Am eliminat Config.apiKey
 
-      const mapProperties: esri.WebMapProperties = {
+      // 1. Definim Proprietățile Hărții
+      const mapProperties: esri.MapProperties = { // Folosim MapProperties
         basemap: this.basemap
       };
-      this.map = new WebMap(mapProperties);
+      
+      // 2. Creăm Harta
+      this.map = new Map(mapProperties); // Folosim Map
 
-      this.addFeatureLayers();
-      this.addGraphicsLayer();
+      this.addFeatureLayers(); // Adaugă layerul tău POI (S11)
+      this.addGraphicsLayer(); // Păstrează layerele grafice pentru rutare
 
+      // 3. Creăm View-ul (Afișarea)
       const mapViewProperties = {
         container: this.mapViewEl.nativeElement,
         center: this.center,
@@ -78,14 +83,14 @@ export class MapComponent implements OnInit, OnDestroy {
       };
       this.view = new MapView(mapViewProperties);
 
-      this.view.on('pointer-move', ["Shift"], (event) => {
-        const point = this.view.toMap({ x: event.x, y: event.y });
-        console.log("Map pointer moved: ", point.longitude, point.latitude);
-      });
+      // Am eliminat evenimentul 'pointer-move'
 
       await this.view.when();
       console.log("ArcGIS map loaded");
-      this.addRouting();
+      
+      // Dacă vrei funcționalitatea de rutare, activează-o. Altfel, las-o comentată.
+      // this.addRouting(); 
+      
       return this.view;
     } catch (error) {
       console.error("Error loading the map: ", error);
@@ -94,23 +99,38 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   addFeatureLayers() {
-    this.trailheadsLayer = new FeatureLayer({
-      url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trailheads/FeatureServer/0",
-      outFields: ['*']
-    });
-    this.map.add(this.trailheadsLayer);
+    // 1. Definirea Pop-up Template pentru POI (Sarcina S11: Configurarea pop-up-urilor)
+    const poiPopupTemplate = {
+      title: "{NAME}", 
+      content: [
+        {
+          type: "fields",
+          fieldInfos: [
+            { fieldName: "attractionType", label: "Categorie" },
+            { fieldName: "RATING", label: "Rating (din 5)" },
+            { fieldName: "estimatedTime", label: "Timp estimat de vizitare (min)" },
+            { fieldName: "priceRange", label: "Interval preț (Lei/Euro)" },
+            { fieldName: "openingHours", label: "Program" }
+          ]
+        }
+      ]
+    };
 
-    const trailsLayer = new FeatureLayer({
-      url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Trails/FeatureServer/0"
+    // 2. Creează Feature Layer-ul tău POI (Sarcina S11: Implementare hartă)
+    this.poiLayer = new FeatureLayer({
+      // ATENȚIE: ÎNLOCUIEȘTE CU URL-ul REAL al Feature Layer-ului tău POIs!
+      url: "https://services7.arcgis.com/wvTaT0ejNMyTL183/arcgis/rest/services/POIs/FeatureServer", 
+      outFields: ["*"], 
+      title: "POI Layer NoMad",
+      popupTemplate: poiPopupTemplate // Aplică șablonul
     });
-    this.map.add(trailsLayer, 0);
+    
+    // 3. Adaugă layerul la hartă
+    this.map.add(this.poiLayer);
 
-    const parksLayer = new FeatureLayer({
-      url: "https://services3.arcgis.com/GVgbJbqm8hXASVYi/arcgis/rest/services/Parks_and_Open_Space/FeatureServer/0"
-    });
-    this.map.add(parksLayer, 0);
-
-    console.log("Feature layers added");
+    // Am eliminat layerele vechi de California
+    
+    console.log("POI Feature layer added");
   }
 
   addGraphicsLayer() {
@@ -127,7 +147,8 @@ export class MapComponent implements OnInit, OnDestroy {
     this.view.on("click", (event) => {
       this.view.hitTest(event).then((elem: esri.HitTestResult) => {
         if (elem && elem.results && elem.results.length > 0) {
-          let point: esri.Point = elem.results.find(e => e.layer === this.trailheadsLayer)?.mapPoint;
+          // ATENȚIE: Am schimbat trailheadsLayer cu poiLayer pentru hitTest
+          let point: esri.Point = elem.results.find(e => e.layer === this.poiLayer)?.mapPoint; 
           if (point) {
             console.log("get selected point: ", elem, point);
             if (this.graphicsLayerUserPoints.graphics.length === 0) {
@@ -152,7 +173,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
     const simpleMarkerSymbol = {
       type: "simple-marker",
-      color: [226, 119, 40],  // Orange
+      color: [226, 119, 40],  // Orange
       outline: {
         color: [255, 255, 255], // White
         width: 1
