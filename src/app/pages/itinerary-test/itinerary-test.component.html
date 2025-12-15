@@ -1,0 +1,27 @@
+<div style="padding:16px;">
+  <h2>Itinerary Test</h2>
+
+  <div style="margin: 8px 0;">
+    <label>cityId:</label>
+    <input [(ngModel)]="cityId" placeholder="ex: bucuresti / city1" />
+  </div>
+
+  <div style="margin: 8px 0;">
+    <label>categories (comma separated):</label>
+    <input [(ngModel)]="categoriesText" placeholder="restaurant,museum" />
+  </div>
+
+  <div style="margin: 8px 0;">
+    <label>days:</label>
+    <input type="number" [(ngModel)]="days" min="1" max="30" />
+  </div>
+
+  <button (click)="runTest()">Generate test itinerary</button>
+
+  <p><b>Status:</b> {{ status }}</p>
+  <p *ngIf="lastItineraryId"><b>Last itineraryId:</b> {{ lastItineraryId }}</p>
+
+  <p style="opacity:0.7;">
+    Tip: deschide DevTools → Console ca sa vezi POI-urile si schedule-ul.
+  </p>
+</div>
