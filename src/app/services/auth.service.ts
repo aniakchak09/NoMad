@@ -60,4 +60,17 @@ export class AuthService {
       console.error('Eroare la testSignUp:', err);
     }
   }
+
+  async testLogin(): Promise<void> {
+  const email = 'demo@test.com';
+  const password = 'parola123';
+
+  try {
+    const result = await this.auth.signInWithEmailAndPassword(email, password);
+    console.log('User logat (TEST):', result.user?.uid);
+  } catch (err) {
+    console.error('Eroare la testLogin:', err);
+  }
+}
+
 }

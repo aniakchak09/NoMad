@@ -20,11 +20,18 @@ import { AngularFireDatabaseModule } from '@angular/fire/compat/database';
 
 import { environment } from '../environments/environment';
 
+// manually added
+import { FormsModule } from '@angular/forms';
+import { ItineraryService } from './services/itinerary.service';
+import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
+
+
 @NgModule({
   declarations: [
     AppComponent,
     HomeComponent,
-    MapComponent
+    MapComponent,
+    ItineraryTestComponent
   ],
   imports: [
     BrowserModule,
@@ -38,7 +45,8 @@ import { environment } from '../environments/environment';
 
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireAuthModule,
-    AngularFireDatabaseModule
+    AngularFireDatabaseModule,
+    FormsModule
   ],
   providers: [],
   bootstrap: [AppComponent]
