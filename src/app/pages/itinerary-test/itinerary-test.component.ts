@@ -1,7 +1,13 @@
 import { Component } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
-import { PoiService } from '../../services/poi.service';
+import { PoiService, Poi } from '../../services/poi.service'; // Added Poi import
 import { ItineraryService, Preferences } from '../../services/itinerary.service';
+import { AuthService } from '../../services/auth.service';
+
+// Define a type for the schedule using POI names for saving/display
+interface ScheduleWithNames {
+  [day: string]: string[]; // e.g., 'day1': ['Museum Name', 'Restaurant Name']
+}
 
 @Component({
   selector: 'app-itinerary-test',
@@ -13,14 +19,15 @@ export class ItineraryTestComponent {
   lastItineraryId: string | null = null;
 
   // setează valori reale (trebuie să existe în layer-ul ArcGIS)
-  cityId = 'city1';
-  categoriesText = 'restaurant,museum'; // separate prin virgula
+  cityId = 'bucuresti';
+  categoriesText = 'park,museum'; // separate prin virgula
   days = 3;
 
   constructor(
     private afAuth: AngularFireAuth,
     private poiService: PoiService,
-    private itineraryService: ItineraryService
+    private itineraryService: ItineraryService,
+    private authService: AuthService
   ) {}
 
   async runTest(): Promise<void> {
@@ -28,6 +35,8 @@ export class ItineraryTestComponent {
     this.lastItineraryId = null;
 
     try {
+        await this.authService.testLogin();
+
       // 1) user trebuie sa fie logat (ca sa avem uid)
       const user = await this.afAuth.currentUser;
       if (!user?.uid) {
@@ -58,22 +67,51 @@ export class ItineraryTestComponent {
         return;
       }
 
-      // 4) genereaza schedule
-      const schedule = this.itineraryService.generateSchedule(pois, prefs);
-      console.log('[TEST] schedule:', schedule);
+      // 4) genereaza schedule - Presupunem că returnează un obiect de tip { [day: string]: string[] } unde array-ul conține POI IDs.
+      const scheduleWithPoiIds = this.itineraryService.generateSchedule(pois, prefs);
+      console.log('[TEST] scheduleWithPoiIds:', scheduleWithPoiIds);
+
+      // --- Modificarea 1: Schimbarea schedule-ului pentru a conține nume de POI ---
+
+      // Construim o hartă de la poiId la POI-ul complet pentru căutare ușoară
+      const poiMap = new Map<string, Poi>(pois.map(poi => [poi.poiId, poi]));
+
+      const scheduleWithNames: ScheduleWithNames = {};
+      const usedPoiIds = new Set<string>();
+
+      for (const day in scheduleWithPoiIds) {
+          const poiIdsForDay = scheduleWithPoiIds[day];
+          const poiNamesForDay: string[] = [];
+
+          for (const poiId of poiIdsForDay) {
+              const poi = poiMap.get(poiId);
+              if (poi) {
+                  // Adăugăm numele în schedule-ul nou
+                  poiNamesForDay.push(poi.name);
+                  // Ținem evidența POI-urilor folosite
+                  usedPoiIds.add(poiId);
+              } else {
+                  console.warn(`[TEST] POI cu ID-ul ${poiId} nu a fost găsit în lista inițială.`);
+              }
+          }
+          scheduleWithNames[day] = poiNamesForDay;
+      }
 
       // 5) calculeaza cost (optional)
-      const usedPoiIds = new Set(Object.values(schedule).reduce<string[]>((acc, arr) => acc.concat(arr), []));
-      const usedPois = pois.filter(p => usedPoiIds.has(p.poiId));
-      const totalCost = this.itineraryService.estimateTotalCost(usedPois);
 
-      // 6) salveaza in Firebase
+      // --- Modificarea 2: Asigurăm că `usedPois` sunt POI-urile complete folosite pentru calculul costului ---
+      const usedPois = Array.from(usedPoiIds).map(id => poiMap.get(id)).filter((p): p is Poi => p !== undefined);
+
+      const totalCost = this.itineraryService.estimateTotalCost(usedPois);
+      console.log('[TEST] totalCost:', totalCost);
+
+      // 6) salveaza in Firebase - Salvăm noul schedule cu nume
       const itineraryId = await this.itineraryService.saveItinerary(
         uid,
         this.cityId,
         prefs.days,
         totalCost,
-        schedule
+        scheduleWithNames // Folosim schedule-ul cu nume
       );
 
       this.lastItineraryId = itineraryId;

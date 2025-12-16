@@ -2,27 +2,22 @@ import { Injectable } from '@angular/core';
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
 import type Graphic from '@arcgis/core/Graphic';
 
-export type PriceRange = 'low' | 'medium' | 'high' | string;
-
 export interface Poi {
   poiId: string;
   cityId: string;
   name: string;
-  type: string;
+  attractionType: string;
   rating?: number;
-  priceRange?: PriceRange;
+  priceRange?: string;     // ex: "40-60"
   openingHours?: string;
-  // opțional: coordonate dacă vreți mai târziu
-  // x?: number;
-  // y?: number;
+  estimatedTime?: number;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class PoiService {
-  // ✅ pune aici URL-ul layer-ului vostru ArcGIS Online (FeatureServer/0)
-  private readonly POI_LAYER_URL = 'PASTE_POI_LAYER_URL_HERE';
+  // ✅ pune aici URL-ul layer-ului POIs (Sublayer corect: /0 sau /1)
+  private readonly POI_LAYER_URL =
+    'https://services7.arcgis.com/wvTaT0ejNMyTL183/arcgis/rest/services/POIs/FeatureServer/0';
 
   private readonly layer: FeatureLayer;
 
@@ -34,34 +29,58 @@ export class PoiService {
   }
 
   /**
-   * Returnează POI-urile pentru un oraș, opțional filtrate pe tipuri (categorii).
+   * Ia POI-urile pentru un oras, optional filtrate pe categorii.
+   * ATENTIE: categories sunt valori din attractionType (ex: "government", etc.)
    */
-  async getPoisByCity(cityId: string, types?: string[]): Promise<Poi[]> {
+  async getPoisByCity(cityId: string, categories?: string[]): Promise<Poi[]> {
     const query = this.layer.createQuery();
-    query.where = this.buildWhereClause(cityId, types);
     query.returnGeometry = false;
-    query.outFields = ['poiId', 'cityId', 'name', 'type', 'rating', 'priceRange', 'openingHours'];
+
+    // ✅ filtre pe campurile reale din layer
+    query.where = this.buildWhereClause(cityId, categories);
+
+    // ✅ campurile pe care le folosim in aplicatie
+    query.outFields = [
+      'poiId',
+      'cityId',
+      'name',
+      'attractionType',
+      'rating',
+      'priceRange',
+      'openingHours',
+      'estimatedTime'
+    ];
 
     const res = await this.layer.queryFeatures(query);
 
     return (res.features || [])
       .map((g: Graphic) => g.attributes as Poi)
-      .filter(p => !!p && !!p.poiId); // safety
+      .filter(p => !!p?.poiId);
   }
 
-  private buildWhereClause(cityId: string, types?: string[]): string {
-    const safeCity = this.escapeQuotes(cityId);
+  /**
+   * Helper pentru UI: dintr-o lista de poiId -> lista de nume.
+   * Foloseste lista de POI-uri deja incarcata (din ArcGIS).
+   */
+  mapPoiIdsToNames(poiIds: string[], pois: Poi[]): string[] {
+    const dict = new Map(pois.map(p => [p.poiId, p.name]));
+    return (poiIds || []).map(id => dict.get(id) ?? id);
+  }
 
+  private buildWhereClause(cityId: string, categories?: string[]): string {
+    const safeCity = this.escapeQuotes(cityId);
     const base = `cityId='${safeCity}'`;
 
-    if (!types || types.length === 0) return base;
+    if (!categories || categories.length === 0) return base;
 
-    const list = types
+    const list = categories
+      .map(s => String(s).trim())
       .filter(Boolean)
-      .map(t => `'${this.escapeQuotes(t)}'`)
+      .map(v => `'${this.escapeQuotes(v)}'`)
       .join(',');
 
-    return `${base} AND type IN (${list})`;
+    // ✅ campul real pt categorie
+    return `${base} AND attractionType IN (${list})`;
   }
 
   private escapeQuotes(value: string): string {

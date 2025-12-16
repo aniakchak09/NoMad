@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { AngularFireDatabase } from '@angular/fire/compat/database';
-import { Poi, PriceRange } from './poi.service';
+import { Poi} from './poi.service';
 
 export interface Preferences {
   days: number;
@@ -36,7 +36,7 @@ export class ItineraryService {
     const categories = (prefs.categories || []).filter(Boolean);
 
     const filtered = categories.length
-      ? pois.filter(p => categories.includes(p.type))
+      ? pois.filter(p => categories.includes(p.attractionType))
       : [...pois];
 
     filtered.sort((a, b) => (Number(b.rating || 0) - Number(a.rating || 0)));
@@ -59,14 +59,38 @@ export class ItineraryService {
    * Poți să o lași 0 dacă nu vrei cost.
    */
   estimateTotalCost(poisUsed: Poi[]): number {
-    // mapping simplu: low=25, medium=50, high=100
-    const map: Record<string, number> = { low: 25, medium: 50, high: 100 };
-    const total = poisUsed.reduce((sum, p) => {
-      const key = String((p.priceRange || '')).toLowerCase() as PriceRange;
-      return sum + (map[key] ?? 0);
-    }, 0);
-    return Math.round(total);
-  }
+  const total = poisUsed.reduce((sum, p) => {
+    // 1. Get the price range string, e.g., "10-20", "0-0", "30-80"
+    const priceRangeString = String(p.priceRange || '').trim();
+
+    // 2. Check if the string contains a dash to signify a range
+    if (!priceRangeString.includes('-')) {
+        // Handle cases where the format might not be a range (e.g., just "0" or empty)
+        const singlePrice = parseFloat(priceRangeString);
+        return sum + (isNaN(singlePrice) ? 0 : singlePrice);
+    }
+
+    // 3. Split the range string into two values
+    const parts = priceRangeString.split('-');
+    
+    const lowerBound = parseFloat(parts[0]);
+    const upperBound = parseFloat(parts[1]);
+
+    let estimatedCost = 0;
+
+    // 4. Calculate the average cost (midpoint of the range)
+    if (!isNaN(lowerBound) && !isNaN(upperBound)) {
+      estimatedCost = (lowerBound + upperBound) / 2;
+    } 
+    // Handle the case "0-0" correctly, where lowerBound=0, upperBound=0, cost=0.
+    // Handle cases where the range is malformed (e.g., "10-") - they default to 0.
+
+    return sum + estimatedCost;
+  }, 0);
+
+  // Round the final total cost
+  return Math.round(total);
+}
 
   /**
    * Salvează itinerariul în Realtime Database.
