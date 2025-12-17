@@ -7,3 +7,5 @@
 <div class="container">
   <router-outlet></router-outlet>
 </div>
+
+<button *ngIf="isLoggedIn" (click)="signOut()">Sign out</button>

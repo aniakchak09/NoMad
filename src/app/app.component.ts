@@ -3,6 +3,7 @@ import { NavigationEnd, Event, Router } from '@angular/router';
 import { AuthService } from './services/auth.service'; // ajustează calea dacă e altfel
 import { FormsModule } from '@angular/forms';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
+import { AngularFireAuth } from '@angular/fire/compat/auth';
 
 
 interface ITab {
@@ -34,16 +35,22 @@ export class AppComponent implements OnInit {
   ];
 
   activeTab = this.tabs[0].link;
+  isLoggedIn = false;
 
   constructor(
     private router: Router,
-    private authService: AuthService   // 👈 injectăm serviciul
+    private authService: AuthService,   // 👈 injectăm serviciul
+    private afAuth: AngularFireAuth
   ) {
     this.router.events.subscribe((event: Event) => {
       if (event instanceof NavigationEnd) {
         this.activeTab = event.url;
         console.log(event);
       }
+    });
+
+    this.afAuth.authState.subscribe(user => {
+    this.isLoggedIn = !!user;
     });
   }
 
@@ -56,5 +63,10 @@ export class AppComponent implements OnInit {
   // See app.component.html
   mapLoadedEvent(status: boolean) {
     console.log('The map loaded: ' + status);
+  }
+
+    async signOut(): Promise<void> {
+    await this.authService.signOut();
+    await this.router.navigateByUrl('/login');
   }
 }

@@ -3,25 +3,38 @@ import { NgModule } from '@angular/core';
 import { MapComponent } from './pages/map/map.component';
 import { HomeComponent } from './pages/home/home.component';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
+import { LoginComponent } from './pages/login/login.component';
+import { AuthGuard } from './guards/auth.guard';
 
 
 export const routes: Routes = [
-  {
-    path: 'home',
-    component: HomeComponent,
+  { 
+    path: 'home', 
+    component: HomeComponent, 
+    canActivate: [AuthGuard] 
   },
-  {
-    path: 'map',
-    component: MapComponent,
-  },
-  {
-    path: '',
-    redirectTo: 'home',
-    pathMatch: 'full',
+  { 
+    path: 'map', 
+    component: MapComponent, 
+    canActivate: [AuthGuard] 
   },
   { 
     path: 'itinerary-test', 
-    component: ItineraryTestComponent 
+    component: ItineraryTestComponent, 
+    canActivate: [AuthGuard] 
+  },
+  { 
+    path: '', redirectTo: '/login', 
+    pathMatch: 'full' 
+  },
+  { 
+    path: 'login', 
+    component: LoginComponent
+  },
+  // fallback
+  { 
+    path: '**', 
+    redirectTo: '/login' 
   }
 ];
 
