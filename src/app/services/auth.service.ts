@@ -73,4 +73,7 @@ export class AuthService {
   }
 }
 
+  async signOut(): Promise<void> {
+    await this.auth.signOut();
+  }
 }

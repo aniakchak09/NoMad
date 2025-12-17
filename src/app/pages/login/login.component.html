@@ -1,0 +1,31 @@
+<div class="wrap">
+  <h2 *ngIf="mode==='login'">Login</h2>
+  <h2 *ngIf="mode==='signup'">Sign up</h2>
+
+  <form (ngSubmit)="submit()">
+    <div *ngIf="mode==='signup'" class="field">
+      <label>Username</label>
+      <input [(ngModel)]="username" name="username" placeholder="ex: dan" />
+    </div>
+
+    <div class="field">
+      <label>Email</label>
+      <input [(ngModel)]="email" name="email" type="email" required placeholder="ex: demo@test.com" />
+    </div>
+
+    <div class="field">
+      <label>Password</label>
+      <input [(ngModel)]="password" name="password" type="password" required />
+    </div>
+
+    <button type="submit" [disabled]="loading">
+      {{ loading ? '...' : (mode === 'login' ? 'Login' : 'Create account') }}
+    </button>
+
+    <p class="error" *ngIf="error">{{ error }}</p>
+
+    <a class="link" (click)="toggleMode()">
+      {{ mode === 'login' ? 'Nu ai cont? Sign up' : 'Ai cont? Login' }}
+    </a>
+  </form>
+</div>

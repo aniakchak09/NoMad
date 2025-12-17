@@ -24,6 +24,7 @@ import { environment } from '../environments/environment';
 import { FormsModule } from '@angular/forms';
 import { ItineraryService } from './services/itinerary.service';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
+import { LoginComponent } from './pages/login/login.component';
 
 
 @NgModule({
@@ -31,7 +32,8 @@ import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.co
     AppComponent,
     HomeComponent,
     MapComponent,
-    ItineraryTestComponent
+    ItineraryTestComponent,
+    LoginComponent
   ],
   imports: [
     BrowserModule,
