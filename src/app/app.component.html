@@ -1,11 +1,19 @@
-<nav mat-tab-nav-bar [tabPanel]="tabPanel">
-  <a mat-tab-link *ngFor="let tab of tabs" (click)="activeTab = tab.link" [active]="activeTab == tab.link"
-    [routerLink]="tab.link">{{tab.name}}</a>
+<!-- Navbar cu tab-uri (același stil ca înainte), vizibil doar când ești logat -->
+<nav mat-tab-nav-bar *ngIf="isLoggedIn">
+  <a
+    mat-tab-link
+    *ngFor="let tab of tabs"
+    [routerLink]="tab.link"
+    routerLinkActive #rla="routerLinkActive"
+    [active]="rla.isActive">
+    {{ tab.name }}
+  </a>
+
+  <!-- Sign out în aceeași bară -->
+  <span style="flex: 1 1 auto;"></span>
+  <button mat-button (click)="signOut()">
+    Sign out
+  </button>
 </nav>
-<mat-tab-nav-panel #tabPanel></mat-tab-nav-panel>
 
-<div class="container">
-  <router-outlet></router-outlet>
-</div>
-
-<button *ngIf="isLoggedIn" (click)="signOut()">Sign out</button>
+<router-outlet></router-outlet>
