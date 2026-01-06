@@ -1,16 +1,30 @@
 <div class="filter-container">
-  <label for="typeFilter">Filtrează după tip: </label>
-  <select id="typeFilter" (change)="onFilterChange($event)">
-    <option value="all" class="opt-all">Toate obiectivele</option>
-    <option value="museum" class="opt-museum">Muzee</option>
-    <option value="architecture" class="opt-architecture">Arhitectură</option>
-    <option value="culture" class="opt-culture">Cultură</option>
-    <option value="district" class="opt-district">Districte</option>
-    <option value="government" class="opt-government">Guvern</option>
-    <option value="landmark" class="opt-landmark">Landmark-uri</option>
-    <option value="leisure" class="opt-leisure">Timp liber</option>
-    <option value="park" class="opt-park">Parcuri</option>
-  </select>
+  <div class="filter-section">
+    <label for="typeFilter">Filtrează după tip: </label>
+    <select id="typeFilter" (change)="onFilterChange($event)">
+      <option value="all" class="opt-all">Toate obiectivele</option>
+      <option value="museum" class="opt-museum">Muzee</option>
+      <option value="architecture" class="opt-architecture">Arhitectură</option>
+      <option value="culture" class="opt-culture">Cultură</option>
+      <option value="district" class="opt-district">Districte</option>
+      <option value="government" class="opt-government">Guvern</option>
+      <option value="landmark" class="opt-landmark">Landmark-uri</option>
+      <option value="leisure" class="opt-leisure">Timp liber</option>
+      <option value="park" class="opt-park">Parcuri</option>
+    </select>
+  </div>
+
+  <hr />
+
+  <div class="filter-section">
+    <label>Filtrează după Rating:</label>
+    <div class="rating-options">
+      <label *ngFor="let star of [1, 2, 3, 4, 5]">
+        <input type="checkbox" [value]="star" (change)="onRatingChange($event)">
+        {{ star }} ★
+      </label>
+    </div>
+  </div>
 </div>
 
 <!-- Main container to hold the map and sidebar -->

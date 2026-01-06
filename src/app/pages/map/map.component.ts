@@ -356,20 +356,51 @@ export class MapComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFilterChange(event: any) {
-  const selectedType = event.target.value;
+  // Adaugă aceste proprietăți în clasa MapComponent
+selectedType: string = 'all';
+selectedRatings: Set<number> = new Set();
 
+// Modifică onFilterChange pentru a salva tipul și a reaplica filtrele
+onFilterChange(event: any) {
+  this.selectedType = event.target.value;
+  this.applyCombinedFilters();
+}
+
+// Adaugă metoda pentru schimbarea rating-ului
+onRatingChange(event: any) {
+  const rating = parseInt(event.target.value);
+  if (event.target.checked) {
+    this.selectedRatings.add(rating);
+  } else {
+    this.selectedRatings.delete(rating);
+  }
+  this.applyCombinedFilters();
+}
+
+// Metoda centrală care construiește clauza SQL (definitionExpression)
+applyCombinedFilters() {
   if (!this.poiLayer) return;
 
-  if (selectedType === "all") {
-    // Șterge filtrul pentru a arăta toate punctele
-    this.poiLayer.definitionExpression = "";
-  } else {
-    // Aplică filtrul SQL pe coloana 'attractionType'
-    // Atenție: Valorile din coloana 'attractionType' trebuie să fie scrise exact ca în baza de date
-    this.poiLayer.definitionExpression = `attractionType = '${selectedType}'`;
+  let conditions: string[] = [];
+
+  // 1. Logica pentru Tip
+  if (this.selectedType !== 'all') {
+    conditions.push(`attractionType = '${this.selectedType}'`);
   }
 
-  
+  // 2. Logica pentru Rating (Intervale)
+  if (this.selectedRatings.size > 0) {
+    const ratingQueries = Array.from(this.selectedRatings).map(star => {
+      // Definim intervalele: [star - 0.5, star + 0.5)
+      // Ex: Pentru 2 stele: RATING >= 1.5 AND RATING < 2.5
+      const lowerBound = star - 0.5;
+      const upperBound = star + 0.5;
+      return `(RATING >= ${lowerBound} AND RATING < ${upperBound})`;
+    });
+    conditions.push(`(${ratingQueries.join(' OR ')})`);
   }
+
+  // Combinăm toate condițiile cu AND
+  this.poiLayer.definitionExpression = conditions.length > 0 ? conditions.join(' AND ') : "";
+}
 }
