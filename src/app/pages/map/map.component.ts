@@ -355,4 +355,21 @@ export class MapComponent implements OnInit, OnDestroy {
       this.view.container = null;
     }
   }
+
+  onFilterChange(event: any) {
+  const selectedType = event.target.value;
+
+  if (!this.poiLayer) return;
+
+  if (selectedType === "all") {
+    // Șterge filtrul pentru a arăta toate punctele
+    this.poiLayer.definitionExpression = "";
+  } else {
+    // Aplică filtrul SQL pe coloana 'attractionType'
+    // Atenție: Valorile din coloana 'attractionType' trebuie să fie scrise exact ca în baza de date
+    this.poiLayer.definitionExpression = `attractionType = '${selectedType}'`;
+  }
+
+  
+  }
 }

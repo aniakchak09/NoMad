@@ -5,6 +5,34 @@
 //   height: 500px;
 // }
 
+.filter-container {
+  position: absolute;
+  top: 75px; /* Ajustează în funcție de header-ul tău */
+  left: 70px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  
+  select {
+    padding: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+
+    /* Stilizare opțiuni individuale */
+    .opt-all { color: #ffffff; background-color: #000000; }
+    .opt-museum { color: #ffffff; background-color: #eaa61a; }
+    .opt-architecture { color: #ffffff; background-color: #904fae; }
+    .opt-culture { color: #ffffff; background-color: #8335a8;}
+    .opt-district { color: #ffffff; background-color: #ffd700; }
+    .opt-government { color: #ffffff; background-color: #0079c1; }
+    .opt-landmark { color: #ffffff; background-color: #e79c00; }
+    .opt-leisure { color: #ffffff; background-color: #6a3f00; }
+    .opt-park { color: #ffffff; background-color: #73c970; }
+  }
+}
+
 /* Container to hold both the sidebar and the map */
 .container {
   display: flex;
