@@ -25,6 +25,7 @@ import { FormsModule } from '@angular/forms';
 import { ItineraryService } from './services/itinerary.service';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
 import { LoginComponent } from './pages/login/login.component';
+import { MatIconModule } from '@angular/material/icon';
 
 
 @NgModule({
@@ -48,7 +49,9 @@ import { LoginComponent } from './pages/login/login.component';
     AngularFireModule.initializeApp(environment.firebase),
     AngularFireAuthModule,
     AngularFireDatabaseModule,
-    FormsModule
+    FormsModule,
+    MatIconModule,
+    MatListModule
   ],
   providers: [],
   bootstrap: [AppComponent]

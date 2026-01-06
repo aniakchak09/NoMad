@@ -89,7 +89,7 @@ export class MapComponent implements OnInit, OnDestroy {
       console.log("ArcGIS map loaded");
       
       // Dacă vrei funcționalitatea de rutare, activează-o. Altfel, las-o comentată.
-      // this.addRouting(); 
+      this.addRouting(); 
       
       return this.view;
     } catch (error) {

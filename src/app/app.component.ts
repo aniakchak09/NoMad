@@ -65,7 +65,7 @@ export class AppComponent implements OnInit {
     console.log('The map loaded: ' + status);
   }
 
-    async signOut(): Promise<void> {
+  async signOut(): Promise<void> {
     await this.authService.signOut();
     await this.router.navigateByUrl('/login');
   }
