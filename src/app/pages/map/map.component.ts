@@ -377,6 +377,13 @@ onRatingChange(event: any) {
   this.applyCombinedFilters();
 }
 
+maxPrice: number = 100;
+
+onPriceChange(event: any) {
+  this.maxPrice = parseInt(event.target.value);
+  this.applyCombinedFilters();
+}
+
 // Metoda centrală care construiește clauza SQL (definitionExpression)
 applyCombinedFilters() {
   if (!this.poiLayer) return;
@@ -400,7 +407,33 @@ applyCombinedFilters() {
     conditions.push(`(${ratingQueries.join(' OR ')})`);
   }
 
-  // Combinăm toate condițiile cu AND
-  this.poiLayer.definitionExpression = conditions.length > 0 ? conditions.join(' AND ') : "";
+  // 3. Filtru Preț (Logic pentru string-ul "x-y")
+  // Extragem partea de după '-' și o transformăm în număr pentru comparație
+  // SQL: CAST(SUBSTRING(priceRange, INSTR(priceRange, '-') + 1) AS INT)
+  if (this.maxPrice < 100) {
+  let priceConditions: string[] = [];
+  
+  // Generăm o listă de posibilități pentru prețul maxim stocat în string.
+  // De exemplu, dacă maxPrice este 15, căutăm orice obiectiv care are
+  // prețul de după cratimă între 0 și 15.
+  for (let i = 0; i <= this.maxPrice; i++) {
+    // Căutăm formatul "-valoare" la finalul string-ului (ex: "-12")
+    priceConditions.push(`priceRange LIKE '%-${i}'`);
+  }
+  
+  if (priceConditions.length > 0) {
+    conditions.push(`(${priceConditions.join(' OR ')})`);
+  }
 }
+
+  // Combinăm toate condițiile cu AND
+// --- AICI ADAUGI LOG-UL ---
+  const finalExpression = conditions.length > 0 ? conditions.join(' AND ') : "";
+  
+  console.log("LOG FILTRARE ArcGIS:");
+  console.log("Expresia finală trimisă: ", finalExpression);
+  console.log("Număr filtre active: ", conditions.length);
+
+  // Aplicăm filtrul pe stratul hărții
+  this.poiLayer.definitionExpression = finalExpression;}
 }

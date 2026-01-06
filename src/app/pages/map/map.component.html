@@ -25,6 +25,25 @@
       </label>
     </div>
   </div>
+
+  <hr />
+
+  <div class="filter-section">
+    <label for="priceSlider">Preț maxim: {{ maxPrice }} Lei</label>
+    <input 
+      type="range" 
+      id="priceSlider" 
+      min="0" 
+      max="100" 
+      step="1" 
+      [(ngModel)]="maxPrice" 
+      (input)="onPriceChange($event)">
+    <div class="price-labels">
+      <span>0</span>
+      <span>100</span>
+    </div>
+  </div>
+
 </div>
 
 <!-- Main container to hold the map and sidebar -->

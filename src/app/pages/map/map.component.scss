@@ -1,13 +1,9 @@
 /* import the required JSAPI css */
 // @import url('https://js.arcgis.com/4.12/esri/css/main.css');
 
-// .esri-view {
-//   height: 500px;
-// }
-
 .filter-container {
   position: absolute;
-  top: 75px; /* Ajustează în funcție de header-ul tău */
+  top: 75px; 
   left: 70px;
   z-index: 1000;
   background: white;
@@ -18,7 +14,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 200px;
+  min-width: 220px; // Am mărit puțin pentru a acomoda slider-ul
 
   hr {
     border: 0;
@@ -34,6 +30,21 @@
     label {
       font-weight: bold;
       font-size: 13px;
+    }
+
+    /* Stilizare Slider Preț */
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+      accent-color: #0079c1; // Culoarea mânerului slider-ului
+    }
+
+    .price-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666;
+      margin-top: -3px;
     }
   }
 
@@ -67,8 +78,8 @@
     padding: 5px;
     border-radius: 3px;
     cursor: pointer;
+    border: 1px solid #ccc;
 
-    /* Stilizare opțiuni individuale */
     .opt-all { color: #ffffff; background-color: #000000; }
     .opt-museum { color: #ffffff; background-color: #eaa61a; }
     .opt-architecture { color: #ffffff; background-color: #904fae; }
@@ -81,20 +92,17 @@
   }
 }
 
-/* Container to hold both the sidebar and the map */
 .container {
   display: flex;
   height: calc(100vh - 64px);
   width: 100%;
 }
 
-/* Map view styling */
 .map-view {
-  flex: 1; /* Takes up the remaining space next to the sidebar */
+  flex: 1;
   height: 100%;
 }
 
-/* Floating Action Button (FAB) styling */
 .fab {
   position: fixed;
   bottom: 40px;
@@ -112,8 +120,8 @@
   cursor: pointer;
   z-index: 1100;
   transition: background-color 0.3s;
-}
 
-.fab:hover {
-  background-color: #c0392b;
+  &:hover {
+    background-color: #c0392b;
+  }
 }
