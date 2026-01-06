@@ -5,6 +5,7 @@ import { AppComponent } from './app.component';
 import { AppRoutingModule } from './app-routing.module';
 import { HomeComponent } from './pages/home/home.component';
 import { MapComponent } from './pages/map/map.component';
+import { FavoritesComponent } from './pages/favorites/favorites.components';
 
 // (păstrezi Material/FlexLayout DOAR dacă sunt instalate deja)
 import { MatTabsModule } from '@angular/material/tabs';
@@ -26,6 +27,9 @@ import { ItineraryService } from './services/itinerary.service';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
 import { LoginComponent } from './pages/login/login.component';
 import { MatIconModule } from '@angular/material/icon';
+import { MatExpansionModule } from '@angular/material/expansion';
+import { CommonModule } from '@angular/common';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 
 @NgModule({
@@ -34,7 +38,8 @@ import { MatIconModule } from '@angular/material/icon';
     HomeComponent,
     MapComponent,
     ItineraryTestComponent,
-    LoginComponent
+    LoginComponent,
+    FavoritesComponent
   ],
   imports: [
     BrowserModule,
@@ -51,7 +56,10 @@ import { MatIconModule } from '@angular/material/icon';
     AngularFireDatabaseModule,
     FormsModule,
     MatIconModule,
-    MatListModule
+    MatListModule,
+    MatExpansionModule,
+    CommonModule,
+    BrowserAnimationsModule
   ],
   providers: [],
   bootstrap: [AppComponent]

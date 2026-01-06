@@ -29,8 +29,12 @@ export class AppComponent implements OnInit {
       link: '/map'
     },
     {
-      name: 'Itinerary Test',
+      name: 'Itinerary',
       link: '/itinerary-test'
+    },
+    {
+      name: 'Favorites',
+      link: '/favorites'
     }
   ];
 

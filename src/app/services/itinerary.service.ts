@@ -16,6 +16,7 @@ export interface Itinerary {
   days: number;
   totalCost: number;
   schedule: Record<string, string[]>; // day1 -> [poiId, ...]
+  isFavorite?: boolean;
 }
 
 @Injectable({
@@ -115,5 +116,11 @@ export class ItineraryService {
   async deleteItinerary(itineraryId: string): Promise<void> {
     if (!itineraryId) return;
     return this.db.object(`itineraries/${itineraryId}`).remove();
+  }
+
+  async toggleFavorite(itineraryId: string, currentState: boolean): Promise<void> {
+    return this.db.object(`itineraries/${itineraryId}`).update({
+      isFavorite: !currentState
+    });
   }
 }

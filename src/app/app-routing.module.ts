@@ -5,6 +5,7 @@ import { HomeComponent } from './pages/home/home.component';
 import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.component';
 import { LoginComponent } from './pages/login/login.component';
 import { AuthGuard } from './guards/auth.guard';
+import { FavoritesComponent } from './pages/favorites/favorites.components';
 
 
 export const routes: Routes = [
@@ -22,6 +23,11 @@ export const routes: Routes = [
     path: 'itinerary-test', 
     component: ItineraryTestComponent, 
     canActivate: [AuthGuard] 
+  },
+  {
+    path: 'favorites',
+    component: FavoritesComponent,
+    canActivate: [AuthGuard]
   },
   { 
     path: '', redirectTo: '/login', 
