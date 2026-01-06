@@ -47,4 +47,12 @@ export class HomeComponent implements OnInit {
             }
         }
     }
+
+    async onToggleFavorite(item: Itinerary) {
+        try {
+            await this.itineraryService.toggleFavorite(item.itineraryId, !!item.isFavorite);
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+        }
+    }
 }

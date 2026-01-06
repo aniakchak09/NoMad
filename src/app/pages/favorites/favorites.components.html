@@ -1,0 +1,33 @@
+<div class="favorites-container">
+  <h1>Your Favorite Adventures</h1>
+
+  <mat-accordion *ngIf="(favorites$ | async) as favs">
+    <mat-expansion-panel *ngFor="let item of favs">
+      <mat-expansion-panel-header>
+        <mat-panel-title> {{ item.cityId | titlecase }} </mat-panel-title>
+        <mat-panel-description>
+          {{ item.days }} days — ${{ item.totalCost }}
+        </mat-panel-description>
+      </mat-expansion-panel-header>
+
+      <div class="schedule-details">
+        <h3>Detailed Schedule:</h3>
+        <div *ngFor="let day of item.schedule | keyvalue">
+          <strong>{{ day.key }}:</strong>
+          <ul>
+            <li *ngFor="let poi of day.value">{{ poi }}</li>
+          </ul>
+        </div>
+      </div>
+
+      <mat-action-row>
+        <button mat-button color="warn" (click)="onToggleFavorite(item)">
+          Remove from Favorites
+        </button>
+        <button mat-button color="accent" (click)="deleteItem(item.itineraryId)">
+          Delete Permanently
+        </button>
+      </mat-action-row>
+    </mat-expansion-panel>
+  </mat-accordion>
+</div>

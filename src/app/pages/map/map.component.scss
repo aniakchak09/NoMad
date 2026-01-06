@@ -1,24 +1,108 @@
 /* import the required JSAPI css */
 // @import url('https://js.arcgis.com/4.12/esri/css/main.css');
 
-// .esri-view {
-//   height: 500px;
-// }
+.filter-container {
+  position: absolute;
+  top: 75px; 
+  left: 70px;
+  z-index: 1000;
+  background: white;
+  padding: 10px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 
-/* Container to hold both the sidebar and the map */
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 220px; // Am mărit puțin pentru a acomoda slider-ul
+
+  hr {
+    border: 0;
+    border-top: 1px solid #eee;
+    margin: 5px 0;
+  }
+
+  .filter-section {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+
+    label {
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    /* Stilizare Slider Preț */
+    input[type="range"] {
+      width: 100%;
+      cursor: pointer;
+      accent-color: #0079c1; // Culoarea mânerului slider-ului
+    }
+
+    .price-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #666;
+      margin-top: -3px;
+    }
+  }
+
+  .rating-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+
+    label {
+      font-weight: normal;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #f5f5f5;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: background 0.2s;
+
+      &:hover {
+        background: #e0e0e0;
+      }
+
+      input {
+        cursor: pointer;
+      }
+    }
+  }
+  
+  select {
+    padding: 5px;
+    border-radius: 3px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+
+    .opt-all { color: #ffffff; background-color: #000000; }
+    .opt-museum { color: #ffffff; background-color: #eaa61a; }
+    .opt-architecture { color: #ffffff; background-color: #904fae; }
+    .opt-culture { color: #ffffff; background-color: #8335a8;}
+    .opt-district { color: #ffffff; background-color: #ffd700; }
+    .opt-government { color: #ffffff; background-color: #0079c1; }
+    .opt-landmark { color: #ffffff; background-color: #e79c00; }
+    .opt-leisure { color: #ffffff; background-color: #6a3f00; }
+    .opt-park { color: #ffffff; background-color: #73c970; }
+  }
+}
+
 .container {
   display: flex;
   height: calc(100vh - 64px);
   width: 100%;
 }
 
-/* Map view styling */
 .map-view {
-  flex: 1; /* Takes up the remaining space next to the sidebar */
+  flex: 1;
   height: 100%;
 }
 
-/* Floating Action Button (FAB) styling */
 .fab {
   position: fixed;
   bottom: 40px;
@@ -36,8 +120,8 @@
   cursor: pointer;
   z-index: 1100;
   transition: background-color 0.3s;
-}
 
-.fab:hover {
-  background-color: #c0392b;
+  &:hover {
+    background-color: #c0392b;
+  }
 }

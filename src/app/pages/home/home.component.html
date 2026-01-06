@@ -17,7 +17,10 @@
                     <div mat-line><strong>{{ item.cityId | titlecase }}</strong></div>
                     <div mat-line>{{ item.days }} days — Total Est: ${{ item.totalCost }}</div>
                     <button mat-icon-button color="warn" (click)="deleteItem(item.itineraryId)" title="Delete Itinerary">
-                        <mat-icon>del</mat-icon>
+                        <mat-icon>delete</mat-icon>  
+                    </button>
+                    <button mat-icon-button (click)="onToggleFavorite(item)" [color]="item.isFavorite ? 'warn' : ''">
+                        <mat-icon>{{ item.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
                     </button>
                     <mat-divider></mat-divider>
                 </mat-list-item>
