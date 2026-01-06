@@ -1,11 +1,35 @@
-<div class="title">
-    <h1>
-        Welcome to
-        <a class="api-url" href="https://developers.arcgis.com/javascript/">
-            ArcGIS Maps SDK for JavaScript
-        </a>        
-        with . . .
-    </h1>
-    <img width="200" alt="Angular Logo"
-        src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNTAgMjUwIj4KICAgIDxwYXRoIGZpbGw9IiNERDAwMzEiIGQ9Ik0xMjUgMzBMMzEuOSA2My4ybDE0LjIgMTIzLjFMMTI1IDIzMGw3OC45LTQzLjcgMTQuMi0xMjMuMXoiIC8+CiAgICA8cGF0aCBmaWxsPSIjQzMwMDJGIiBkPSJNMTI1IDMwdjIyLjItLjFWMjMwbDc4LjktNDMuNyAxNC4yLTEyMy4xTDEyNSAzMHoiIC8+CiAgICA8cGF0aCAgZmlsbD0iI0ZGRkZGRiIgZD0iTTEyNSA1Mi4xTDY2LjggMTgyLjZoMjEuN2wxMS43LTI5LjJoNDkuNGwxMS43IDI5LjJIMTgzTDEyNSA1Mi4xem0xNyA4My4zaC0zNGwxNy00MC45IDE3IDQwLjl6IiAvPgogIDwvc3ZnPg==" />
+<div class="home-container">
+    <header class="greeting-header">
+        <h1>Hello, <strong>{{ userName }}</strong>, what are you planning next?</h1>
+        <button mat-raised-button color="accent" routerLink="/map">
+            Start New Itinerary
+        </button>
+    </header>
+
+    <mat-divider></mat-divider>
+
+    <section class="history-container">
+        <h3>Previous Itineraries</h3>
+
+        <div *ngIf="(itineraries$ | async) as history; else loading">
+            <mat-list *ngIf="history.length > 0; else noData">
+                <mat-list-item *ngFor="let item of history">
+                    <div mat-line><strong>{{ item.cityId | titlecase }}</strong></div>
+                    <div mat-line>{{ item.days }} days — Total Est: ${{ item.totalCost }}</div>
+                    <button mat-icon-button color="warn" (click)="deleteItem(item.itineraryId)" title="Delete Itinerary">
+                        <mat-icon>del</mat-icon>
+                    </button>
+                    <mat-divider></mat-divider>
+                </mat-list-item>
+            </mat-list>
+        </div>
+
+        <ng-template #noData>
+            <p class="placeholder-text">No history found. Your future trips will appear here!</p>
+        </ng-template>
+
+        <ng-template #loading>
+            <p>Loading your trips...</p>
+        </ng-template>
+    </section>
 </div>

@@ -35,8 +35,6 @@ export class ItineraryTestComponent {
     this.lastItineraryId = null;
 
     try {
-        await this.authService.testLogin();
-
       // 1) user trebuie sa fie logat (ca sa avem uid)
       const user = await this.afAuth.currentUser;
       if (!user?.uid) {

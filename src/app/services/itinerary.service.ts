@@ -111,4 +111,9 @@ export class ItineraryService {
     await this.db.object(`itineraries/${itineraryId}`).set(itinerary);
     return itineraryId;
   }
+
+  async deleteItinerary(itineraryId: string): Promise<void> {
+    if (!itineraryId) return;
+    return this.db.object(`itineraries/${itineraryId}`).remove();
+  }
 }

@@ -38,9 +38,12 @@ export class LoginComponent {
       const password = this.password;
 
       if (this.mode === 'login') {
-        const cred = await this.afAuth.signInWithEmailAndPassword(email, password);
+        // This line is correct as it uses the UI-provided email and password
+        const cred = await this.afAuth.signInWithEmailAndPassword(email, password); 
+        
         if (!cred.user?.uid) throw new Error('Nu am primit UID.');
-        await this.router.navigateByUrl('/home'); // sau '/map'
+        
+        await this.router.navigateByUrl('/home'); 
         return;
       }
 
