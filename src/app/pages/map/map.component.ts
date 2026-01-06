@@ -19,6 +19,9 @@ import Graphic from '@arcgis/core/Graphic';
 import Point from '@arcgis/core/geometry/Point';
 
 import FeatureLayer from '@arcgis/core/layers/FeatureLayer';
+import WebStyleSymbol from '@arcgis/core/symbols/WebStyleSymbol';
+import SimpleMarkerSymbol from '@arcgis/core/symbols/SimpleMarkerSymbol';
+import UniqueValueRenderer from '@arcgis/core/renderers/UniqueValueRenderer';
 
 import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
@@ -46,7 +49,8 @@ export class MapComponent implements OnInit, OnDestroy {
   // Centrul pe București (Long, Lat) și zoom-ul
   zoom = 12; 
   center: Array<number> = [26.1025, 44.4268]; 
-  basemap = "osm"; // OpenStreetMap, basemap neutru
+  basemap = "arcgis-modern-antique"; // OpenStreetMap, basemap neutru
+  //arcgis-navigation , arcgis-nova , osm, 
   loaded = false;
   directionsElement: any;
 
@@ -116,21 +120,110 @@ export class MapComponent implements OnInit, OnDestroy {
       ]
     };
 
-    // 2. Creează Feature Layer-ul tău POI (Sarcina S11: Implementare hartă)
+    // 2. Creează simbolurile pentru fiecare tip de atracție
+    const museumSymbol = new WebStyleSymbol({
+      name: "Museum_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const architectureSymbol = new WebStyleSymbol({
+      name: "Industrial Complex_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const cultureSymbol = new WebStyleSymbol({
+      name: "Library_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const districtSymbol = new WebStyleSymbol({
+      name: "Star_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const governmentSymbol = new WebStyleSymbol({
+      name: "City Hall_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const landmarkSymbol = new WebStyleSymbol({
+      name: "Landmark_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const leisureSymbol = new WebStyleSymbol({
+      name: "Coffee Shop_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    const parkSymbol = new WebStyleSymbol({
+      name: "Park_Large_3",
+      styleUrl: "https://cdn.arcgis.com/sharing/rest/content/items/37da62fcdb854f8e8305c79e8b5023dc/data"
+    });
+
+    // 3. Creează simbolul default pentru tipuri necunoscute
+    const defaultSymbol = new SimpleMarkerSymbol({
+      color: [51, 51, 204],
+      size: 8,
+      outline: {
+        color: [255, 255, 255],
+        width: 1
+      }
+    });
+
+    // 4. Configurează renderer-ul cu toate valorile unice
+    const poiRenderer = new UniqueValueRenderer({
+      field: "attractionType",
+      defaultSymbol: defaultSymbol,
+      uniqueValueInfos: [
+        {
+          value: "museum",
+          symbol: museumSymbol
+        },
+        {
+          value: "architecture",
+          symbol: architectureSymbol
+        },
+        {
+          value: "culture",
+          symbol: cultureSymbol
+        },
+        {
+          value: "district",
+          symbol: districtSymbol
+        },
+        {
+          value: "government",
+          symbol: governmentSymbol
+        },
+        {
+          value: "landmark",
+          symbol: landmarkSymbol
+        },
+        {
+          value: "leisure",
+          symbol: leisureSymbol
+        },
+        {
+          value: "park",
+          symbol: parkSymbol
+        }
+      ]
+    });
+
+    // 5. Creează Feature Layer-ul tău POI cu renderer-ul
     this.poiLayer = new FeatureLayer({
-      // ATENȚIE: ÎNLOCUIEȘTE CU URL-ul REAL al Feature Layer-ului tău POIs!
       url: "https://services7.arcgis.com/wvTaT0ejNMyTL183/arcgis/rest/services/POIs/FeatureServer", 
       outFields: ["*"], 
       title: "POI Layer NoMad",
-      popupTemplate: poiPopupTemplate // Aplică șablonul
+      popupTemplate: poiPopupTemplate,
+      renderer: poiRenderer // Aplică renderer-ul
     });
     
-    // 3. Adaugă layerul la hartă
+    // 6. Adaugă layerul la hartă
     this.map.add(this.poiLayer);
-
-    // Am eliminat layerele vechi de California
     
-    console.log("POI Feature layer added");
+    console.log("POI Feature layer added with custom symbols for all types");
   }
 
   addGraphicsLayer() {
@@ -173,7 +266,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
     const simpleMarkerSymbol = {
       type: "simple-marker",
-      color: [226, 119, 40],  // Orange
+      color: [226, 119, 40],  // Orange
       outline: {
         color: [255, 255, 255], // White
         width: 1
@@ -262,4 +355,85 @@ export class MapComponent implements OnInit, OnDestroy {
       this.view.container = null;
     }
   }
+
+  // Adaugă aceste proprietăți în clasa MapComponent
+selectedType: string = 'all';
+selectedRatings: Set<number> = new Set();
+
+// Modifică onFilterChange pentru a salva tipul și a reaplica filtrele
+onFilterChange(event: any) {
+  this.selectedType = event.target.value;
+  this.applyCombinedFilters();
+}
+
+// Adaugă metoda pentru schimbarea rating-ului
+onRatingChange(event: any) {
+  const rating = parseInt(event.target.value);
+  if (event.target.checked) {
+    this.selectedRatings.add(rating);
+  } else {
+    this.selectedRatings.delete(rating);
+  }
+  this.applyCombinedFilters();
+}
+
+maxPrice: number = 100;
+
+onPriceChange(event: any) {
+  this.maxPrice = parseInt(event.target.value);
+  this.applyCombinedFilters();
+}
+
+// Metoda centrală care construiește clauza SQL (definitionExpression)
+applyCombinedFilters() {
+  if (!this.poiLayer) return;
+
+  let conditions: string[] = [];
+
+  // 1. Logica pentru Tip
+  if (this.selectedType !== 'all') {
+    conditions.push(`attractionType = '${this.selectedType}'`);
+  }
+
+  // 2. Logica pentru Rating (Intervale)
+  if (this.selectedRatings.size > 0) {
+    const ratingQueries = Array.from(this.selectedRatings).map(star => {
+      // Definim intervalele: [star - 0.5, star + 0.5)
+      // Ex: Pentru 2 stele: RATING >= 1.5 AND RATING < 2.5
+      const lowerBound = star - 0.5;
+      const upperBound = star + 0.5;
+      return `(RATING >= ${lowerBound} AND RATING < ${upperBound})`;
+    });
+    conditions.push(`(${ratingQueries.join(' OR ')})`);
+  }
+
+  // 3. Filtru Preț (Logic pentru string-ul "x-y")
+  // Extragem partea de după '-' și o transformăm în număr pentru comparație
+  // SQL: CAST(SUBSTRING(priceRange, INSTR(priceRange, '-') + 1) AS INT)
+  if (this.maxPrice < 100) {
+  let priceConditions: string[] = [];
+  
+  // Generăm o listă de posibilități pentru prețul maxim stocat în string.
+  // De exemplu, dacă maxPrice este 15, căutăm orice obiectiv care are
+  // prețul de după cratimă între 0 și 15.
+  for (let i = 0; i <= this.maxPrice; i++) {
+    // Căutăm formatul "-valoare" la finalul string-ului (ex: "-12")
+    priceConditions.push(`priceRange LIKE '%-${i}'`);
+  }
+  
+  if (priceConditions.length > 0) {
+    conditions.push(`(${priceConditions.join(' OR ')})`);
+  }
+}
+
+  // Combinăm toate condițiile cu AND
+// --- AICI ADAUGI LOG-UL ---
+  const finalExpression = conditions.length > 0 ? conditions.join(' AND ') : "";
+  
+  console.log("LOG FILTRARE ArcGIS:");
+  console.log("Expresia finală trimisă: ", finalExpression);
+  console.log("Număr filtre active: ", conditions.length);
+
+  // Aplicăm filtrul pe stratul hărții
+  this.poiLayer.definitionExpression = finalExpression;}
 }
