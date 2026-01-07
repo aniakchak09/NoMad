@@ -1,38 +1,112 @@
 <div class="home-container">
     <header class="greeting-header">
         <h1>Hello, <strong>{{ userName }}</strong>, what are you planning next?</h1>
-        <button mat-raised-button color="accent" routerLink="/map">
+        <button mat-raised-button color="accent" routerLink="/itinerary-test">
             Start New Itinerary
         </button>
     </header>
 
     <mat-divider></mat-divider>
 
-    <section class="history-container">
-        <h3>Previous Itineraries</h3>
+    <div class="main-layout">
+        <section class="history-container">
+            <h3>Previous Itineraries</h3>
 
-        <div *ngIf="(itineraries$ | async) as history; else loading">
-            <mat-list *ngIf="history.length > 0; else noData">
-                <mat-list-item *ngFor="let item of history">
-                    <div mat-line><strong>{{ item.cityId | titlecase }}</strong></div>
-                    <div mat-line>{{ item.days }} days — Total Est: ${{ item.totalCost }}</div>
-                    <button mat-icon-button color="warn" (click)="deleteItem(item.itineraryId)" title="Delete Itinerary">
-                        <mat-icon>delete</mat-icon>  
+            <div *ngIf="(itineraries$ | async) as history; else loading">
+                <mat-list *ngIf="history.length > 0; else noData">
+                    <mat-list-item 
+                        *ngFor="let item of history; let isFirst = first" 
+                        [class.highlighted]="isFirst"
+                        [class.active-selection]="selectedItinerary?.itineraryId === item.itineraryId"
+                        (click)="selectItinerary(item)">
+                        
+                        <div mat-line><strong>{{ item.cityId | titlecase }}</strong></div>
+                        <div mat-line>{{ item.days }} days — Total Est: ${{ item.totalCost }}</div>
+                        
+                        <div class="list-actions" (click)="$event.stopPropagation()">
+                            <button mat-icon-button (click)="exportAsPdf(item)" title="Export PDF">
+                                <mat-icon>picture_as_pdf</mat-icon>
+                            </button>
+                            <button mat-icon-button (click)="onToggleFavorite(item)" [color]="item.isFavorite ? 'warn' : ''">
+                                <mat-icon>{{ item.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
+                            </button>
+                            <button mat-icon-button color="warn" (click)="deleteItem(item.itineraryId)">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </div>
+                        <mat-divider></mat-divider>
+                    </mat-list-item>
+                </mat-list>
+            </div>
+        </section>
+
+        <aside class="itinerary-detail-panel">
+            <div *ngIf="selectedItinerary; else noSelection" class="detail-card">
+                <div class="detail-header">
+                    <div class="header-main">
+                        <h2>{{ selectedItinerary.cityId | titlecase }}</h2>
+                        <button mat-icon-button (click)="selectedItinerary = null" class="close-btn" title="Close details">
+                            <mat-icon>close</mat-icon>
+                        </button>
+                    </div>
+                    
+                    <button mat-stroked-button color="primary" (click)="viewOnMap(selectedItinerary)" class="map-btn">
+                        <mat-icon>map</mat-icon> View on Map
                     </button>
-                    <button mat-icon-button (click)="onToggleFavorite(item)" [color]="item.isFavorite ? 'warn' : ''">
-                        <mat-icon>{{ item.isFavorite ? 'favorite' : 'favorite_border' }}</mat-icon>
-                    </button>
-                    <mat-divider></mat-divider>
-                </mat-list-item>
-            </mat-list>
-        </div>
+                </div>
 
-        <ng-template #noData>
-            <p class="placeholder-text">No history found. Your future trips will appear here!</p>
-        </ng-template>
+                <p class="summary-text">
+                    <strong>{{ selectedItinerary.days }} Days</strong> trip with an estimated cost of 
+                    <strong>${{ selectedItinerary.totalCost }}</strong>.
+                </p>
 
-        <ng-template #loading>
-            <p>Loading your trips...</p>
-        </ng-template>
-    </section>
+                <mat-divider></mat-divider>
+
+                <div class="schedule-section">
+                    <h3>Schedule Details</h3>
+                    
+                    <mat-accordion multi="false">
+                        <mat-expansion-panel>
+                            <mat-expansion-panel-header>
+                                <mat-panel-title>
+                                    <mat-icon>calendar_today</mat-icon> View Daily Plan
+                                </mat-panel-title>
+                            </mat-expansion-panel-header>
+
+                            <mat-accordion class="days-accordion">
+                                <mat-expansion-panel *ngFor="let dayKey of getScheduleDays(selectedItinerary.schedule)">
+                                    <mat-expansion-panel-header>
+                                        <mat-panel-title>
+                                            {{ dayKey | titlecase }}
+                                        </mat-panel-title>
+                                        <mat-panel-description>
+                                            {{ selectedItinerary.schedule[dayKey].length }} Activities
+                                        </mat-panel-description>
+                                    </mat-expansion-panel-header>
+
+                                    <mat-list dense>
+                                        <mat-list-item *ngFor="let activity of selectedItinerary.schedule[dayKey]">
+                                            <mat-icon mat-list-icon>place</mat-icon>
+                                            <div mat-line>{{ activity }}</div>
+                                        </mat-list-item>
+                                    </mat-list>
+                                </mat-expansion-panel>
+                            </mat-accordion>
+
+                        </mat-expansion-panel>
+                    </mat-accordion>
+                </div>
+            </div>
+
+            <ng-template #noSelection>
+                <div class="placeholder-box">
+                    <mat-icon>info</mat-icon>
+                    <p>Select an itinerary to see the schedule</p>
+                </div>
+            </ng-template>
+        </aside>
+    </div>
 </div>
+
+<ng-template #noData><p class="placeholder-text">No history found.</p></ng-template>
+<ng-template #loading><p>Loading your trips...</p></ng-template>

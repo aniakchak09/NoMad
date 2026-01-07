@@ -1,42 +1,99 @@
 .home-container {
     padding: 40px;
-    max-width: 900px;
+    max-width: 1200px; // Increased width for the split view
     margin: 0 auto;
 
-    .greeting-header {
-        margin-bottom: 30px;
-        h1 {
-            font-size: 2rem;
-            font-weight: 300;
-            strong { color: #3f51b5; }
-        }
+    .main-layout {
+        display: flex;
+        gap: 30px;
+        margin-top: 20px;
     }
 
     .history-container {
-        margin-top: 30px;
-        h3 {
-            color: gray;
-            text-transform: uppercase;
-            font-size: 0.9rem;
-            letter-spacing: 1px;
+        flex: 1; // Takes up 50% or more depending on width
+    }
+
+    .details-container {
+        flex: 1;
+        border-left: 1px solid #eee;
+        padding-left: 30px;
+
+        .details-card {
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            
+            h2 { margin-top: 0; }
+        }
+
+        .placeholder-details {
+            text-align: center;
+            color: #ccc;
+            padding-top: 50px;
+            mat-icon { font-size: 48px; width: 48px; height: 48px; }
         }
     }
 
-    .placeholder-text {
-        color: #999;
-        margin-top: 20px;
-        font-style: italic;
+    mat-list-item {
+        cursor: pointer;
+        transition: background 0.2s;
+        border-radius: 4px;
+        margin-bottom: 5px;
+
+        &:hover { background: #f0f0f0; }
+        
+        // Highlight the first item
+        &.highlighted {
+            border-left: 4px solid #3f51b5;
+            background: rgba(63, 81, 181, 0.05);
+        }
+
+        // Style for currently selected item
+        &.active-selection {
+            background: #e8eaf6;
+        }
     }
 
-    /* home.component.scss */
-
-    mat-list-item {
+    .detail-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        margin-bottom: 15px;
+        h2 { margin: 0; color: #3f51b5; }
     }
 
-    .history-section {
+    .summary-text {
+        color: #555;
+        margin-bottom: 20px;
+    }
+
+    .schedule-section {
         margin-top: 20px;
+        
+        h3 {
+            font-size: 0.9rem;
+            color: #888;
+            margin-bottom: 10px;
+        }
+    }
+
+    // Styling the nested accordion
+    .days-accordion {
+        margin-top: 10px;
+        
+        mat-expansion-panel {
+            box-shadow: none !important;
+            border: 1px solid #eee;
+            margin-bottom: 5px;
+            
+            mat-panel-title {
+                font-weight: 500;
+            }
+        }
+    }
+
+    mat-icon[mat-list-icon] {
+        font-size: 18px;
+        color: #ff4081;
     }
 }
