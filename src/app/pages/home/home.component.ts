@@ -2,8 +2,10 @@ import { Component, OnInit } from "@angular/core";
 import { AngularFireAuth } from "@angular/fire/compat/auth";
 import { AngularFireDatabase } from "@angular/fire/compat/database";
 import { Observable, of } from "rxjs";
-import { switchMap } from "rxjs/operators";
+import { switchMap, map } from "rxjs/operators";
 import { Itinerary, ItineraryService } from "../../services/itinerary.service";
+import { jsPDF } from "jspdf";
+import { autoTable } from "jspdf-autotable";
 
 @Component({
     selector: 'app-home',
@@ -30,7 +32,9 @@ export class HomeComponent implements OnInit {
                     // Fetch itineraries matching current user's ID
                     return this.db.list<Itinerary>('itineraries', ref => 
                         ref.orderByChild('userId').equalTo(user.uid)
-                    ).valueChanges();
+                    ).valueChanges().pipe(
+                        map(list => list.reverse())
+                    );
                 }
                 return of([]);
             })
@@ -67,9 +71,50 @@ export class HomeComponent implements OnInit {
         }
     }
 
-    async exportAsPdf(item: Itinerary) {
-        console.log('Exporting as PDF...', item.itineraryId);
-        // Implementation later
+    exportAsPdf(item: Itinerary) {
+        const doc = new jsPDF();
+        
+        // Set Title
+        doc.setFontSize(22);
+        doc.setTextColor(63, 81, 181); // Match your Indigo theme
+        doc.text(`${item.cityId.toUpperCase()} TRIP`, 14, 20);
+
+        // Add Metadata
+        doc.setFontSize(12);
+        doc.setTextColor(40);
+        doc.text(`Duration: ${item.days} Days`, 14, 30);
+        doc.text(`Estimated Total Budget: $${item.totalCost}`, 14, 38);
+        doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 46);
+
+        // Prepare Table Data
+        const tableRows: any[] = [];
+        const sortedDays = this.getScheduleDays(item.schedule);
+
+        sortedDays.forEach(dayKey => {
+        // Joins activity IDs with a newline and bullet point
+        const activities = item.schedule[dayKey].join('\n• ');
+        tableRows.push([
+            dayKey.toUpperCase(),
+            `• ${activities}`
+        ]);
+        });
+
+        // Create Table
+        autoTable(doc, {
+        startY: 55,
+        head: [['Day', 'Planned Activities']],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [63, 81, 181] },
+        styles: { cellPadding: 5, fontSize: 10, valign: 'middle' },
+        columnStyles: {
+            0: { cellWidth: 30, fontStyle: 'bold' },
+            1: { cellWidth: 'auto' }
+        }
+        });
+
+        // Download file
+        doc.save(`Itinerary_${item.cityId}_${item.itineraryId.substring(0, 5)}.pdf`);
     }
 
     async viewOnMap(item: Itinerary) {

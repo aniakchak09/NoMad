@@ -34,24 +34,35 @@
         }
     }
 
+    .title-row {
+        display: flex;
+        align-items: center;
+        gap: 12px; // Space between city name and badge
+    }
+
+    .list-actions {
+        display: flex;
+        gap: 4px;
+    }
+
     mat-list-item {
-        cursor: pointer;
-        transition: background 0.2s;
-        border-radius: 4px;
-        margin-bottom: 5px;
-
-        &:hover { background: #f0f0f0; }
-        
-        // Highlight the first item
-        &.highlighted {
-            border-left: 4px solid #3f51b5;
-            background: rgba(63, 81, 181, 0.05);
+        &.highlighted-recent {
+            border-left: 4px solid #ff4081;
+            background: rgba(255, 64, 129, 0.03);
         }
+    }
 
-        // Style for currently selected item
-        &.active-selection {
-            background: #e8eaf6;
-        }
+    .recent-badge {
+        background: #ff4081;
+        color: white;
+        font-size: 0.65rem;
+        font-weight: bold;
+        padding: 2px 8px;
+        border-radius: 4px; // Squared edges look cleaner next to text
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        height: fit-content;
+        line-height: normal;
     }
 
     .detail-header {
