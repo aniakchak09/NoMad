@@ -1,124 +1,140 @@
-import { Component } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
+import { Router } from '@angular/router'; // Import Router
 import { AngularFireAuth } from '@angular/fire/compat/auth';
-import { PoiService, Poi } from '../../services/poi.service'; // Added Poi import
+import { PoiService, Poi } from '../../services/poi.service';
 import { ItineraryService, Preferences } from '../../services/itinerary.service';
-import { AuthService } from '../../services/auth.service';
-
-// Define a type for the schedule using POI names for saving/display
-interface ScheduleWithNames {
-  [day: string]: string[]; // e.g., 'day1': ['Museum Name', 'Restaurant Name']
-}
 
 @Component({
   selector: 'app-itinerary-test',
   templateUrl: './itinerary-test.component.html',
   styleUrls: ['./itinerary-test.component.scss']
 })
-export class ItineraryTestComponent {
+export class ItineraryTestComponent implements OnInit {
   status = 'Idle';
-  lastItineraryId: string | null = null;
+  
+  // New structured fields
+  city = 'bucuresti';
+  availableCities = [
+    { id: 'bucuresti', name: 'București' },
+    { id: 'london', name: 'London' },
+    { id: 'paris', name: 'Paris' }
+  ];
 
-  // setează valori reale (trebuie să existe în layer-ul ArcGIS)
-  cityId = 'bucuresti';
-  categoriesText = 'park,museum'; // separate prin virgula
+  selectedCategories: string[] = [];
+  availableCategories = [
+    { id: 'park', name: 'Parks', selected: false },
+    { id: 'museum', name: 'Museums', selected: false },
+    { id: 'architecture', name: 'Architecture', selected: false },
+    { id: 'culture', name: 'Cultural Sites', selected: false },
+    { id: 'district', name: 'Districts', selected: false },
+    { id: 'government', name: 'Government Buildings', selected: false },
+    { id: 'landmark', name: 'Landmarks', selected: false },
+    { id: 'leisure', name: 'Leisure Spots', selected: false }
+  ];
+
   days = 3;
 
   constructor(
     private afAuth: AngularFireAuth,
     private poiService: PoiService,
     private itineraryService: ItineraryService,
-    private authService: AuthService
+    private router: Router // Inject Router
   ) {}
 
+  ngOnInit(): void {}
+
+  // 1. Define the private backing field to store the data
+  private _maxDailyBudget = 50;
+
+  // 2. Define the Getter (Reads the value)
+  get maxDailyBudget(): number {
+    return this._maxDailyBudget;
+  }
+
+  // 3. Define the Setter (Updates the value from the slider)
+  set maxDailyBudget(value: number) {
+    this._maxDailyBudget = value;
+  }
+
+  // 4. Define the Total Budget computed property
+  get totalBudget(): number {
+    return this._maxDailyBudget * this.days;
+  }
+
+  updateCategories(cat: any) {
+    if (cat.selected) {
+      this.selectedCategories.push(cat.id);
+    } else {
+      const index = this.selectedCategories.indexOf(cat.id);
+      if (index > -1) {
+        this.selectedCategories.splice(index, 1);
+      }
+    }
+  }
+
   async runTest(): Promise<void> {
-    this.status = 'Running...';
-    this.lastItineraryId = null;
+    this.status = 'Generating...';
 
     try {
-      // 1) user trebuie sa fie logat (ca sa avem uid)
       const user = await this.afAuth.currentUser;
       if (!user?.uid) {
-        this.status = 'ERROR: Nu esti logat (nu am UID).';
+        this.status = 'ERROR: Please log in first.';
         return;
       }
-
-      const uid = user.uid;
-
-      // 2) preferinte de test
-      const categories = this.categoriesText
-        .split(',')
-        .map(s => s.trim())
-        .filter(Boolean);
 
       const prefs: Preferences = {
         days: Number(this.days || 1),
-        categories,
+        categories: this.selectedCategories,
+        budget: this.maxDailyBudget * this.days, // Total budget calculation
         maxActivitiesPerDay: 3
       };
 
-      // 3) ia POI-uri din ArcGIS
-      const pois = await this.poiService.getPoisByCity(this.cityId, prefs.categories);
-      console.log('[TEST] POIs from ArcGIS:', pois);
+      // Fetch POIs using the city dropdown value
+      const pois = await this.poiService.getPoisByCity(this.city, prefs.categories);
 
       if (!pois.length) {
-        this.status = `ERROR: 0 POI-uri pentru cityId="${this.cityId}" si categories=[${categories.join(', ')}].`;
+        this.status = 'ERROR: No locations found for these criteria.';
         return;
       }
 
-      // 4) genereaza schedule - Presupunem că returnează un obiect de tip { [day: string]: string[] } unde array-ul conține POI IDs.
       const scheduleWithPoiIds = this.itineraryService.generateSchedule(pois, prefs);
-      console.log('[TEST] scheduleWithPoiIds:', scheduleWithPoiIds);
-
-      // --- Modificarea 1: Schimbarea schedule-ului pentru a conține nume de POI ---
-
-      // Construim o hartă de la poiId la POI-ul complet pentru căutare ușoară
       const poiMap = new Map<string, Poi>(pois.map(poi => [poi.poiId, poi]));
-
-      const scheduleWithNames: ScheduleWithNames = {};
+      const scheduleWithNames: Record<string, string[]> = {};
       const usedPoiIds = new Set<string>();
 
       for (const day in scheduleWithPoiIds) {
-          const poiIdsForDay = scheduleWithPoiIds[day];
           const poiNamesForDay: string[] = [];
-
-          for (const poiId of poiIdsForDay) {
+          for (const poiId of scheduleWithPoiIds[day]) {
               const poi = poiMap.get(poiId);
               if (poi) {
-                  // Adăugăm numele în schedule-ul nou
                   poiNamesForDay.push(poi.name);
-                  // Ținem evidența POI-urilor folosite
                   usedPoiIds.add(poiId);
-              } else {
-                  console.warn(`[TEST] POI cu ID-ul ${poiId} nu a fost găsit în lista inițială.`);
               }
           }
           scheduleWithNames[day] = poiNamesForDay;
       }
 
-      // 5) calculeaza cost (optional)
-
-      // --- Modificarea 2: Asigurăm că `usedPois` sunt POI-urile complete folosite pentru calculul costului ---
-      const usedPois = Array.from(usedPoiIds).map(id => poiMap.get(id)).filter((p): p is Poi => p !== undefined);
-
+      const usedPois = Array.from(usedPoiIds).map(id => poiMap.get(id)).filter((p): p is Poi => !!p);
       const totalCost = this.itineraryService.estimateTotalCost(usedPois);
-      console.log('[TEST] totalCost:', totalCost);
 
-      // 6) salveaza in Firebase - Salvăm noul schedule cu nume
-      const itineraryId = await this.itineraryService.saveItinerary(
-        uid,
-        this.cityId,
+      await this.itineraryService.saveItinerary(
+        user.uid,
+        this.city,
         prefs.days,
         totalCost,
-        scheduleWithNames // Folosim schedule-ul cu nume
+        scheduleWithNames
       );
 
-      this.lastItineraryId = itineraryId;
-      this.status = `OK: Itinerariu salvat cu ID = ${itineraryId}`;
-      console.log('[TEST] Saved itineraryId:', itineraryId);
+      this.status = 'Done!';
+      
+      // Redirect to home after a brief delay so the user sees "Done!"
+      setTimeout(() => {
+        this.router.navigate(['/home']);
+      }, 1000);
 
     } catch (err) {
-      console.error('[TEST] error:', err);
-      this.status = 'ERROR: Vezi consola browserului pentru detalii.';
+      console.error(err);
+      this.status = 'ERROR: Generation failed.';
     }
   }
 }

@@ -1,27 +1,63 @@
-<div style="padding:16px;">
-  <h2>Itinerary</h2>
+<div class="itinerary-form-container">
+  <mat-card class="itinerary-card">
+    <mat-card-header>
+      <mat-card-title>Plan Your Next Adventure</mat-card-title>
+      <mat-card-subtitle>Configure your preferences to generate a custom schedule</mat-card-subtitle>
+    </mat-card-header>
 
-  <div style="margin: 8px 0;">
-    <label>cityId:</label>
-    <input [(ngModel)]="cityId" placeholder="ex: bucuresti / city1" />
-  </div>
+    <mat-card-content>
+      <div class="form-row">
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Destination City</mat-label>
+          <mat-select [(ngModel)]="city">
+            <mat-option *ngFor="let c of availableCities" [value]="c.id">
+              {{ c.name }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
 
-  <div style="margin: 8px 0;">
-    <label>categories (comma separated):</label>
-    <input [(ngModel)]="categoriesText" placeholder="park,museum" />
-  </div>
+        <mat-form-field appearance="fill" class="full-width">
+          <mat-label>Number of Days</mat-label>
+          <input matInput type="number" [(ngModel)]="days" min="1" max="30">
+        </mat-form-field>
+      </div>
 
-  <div style="margin: 8px 0;">
-    <label>days:</label>
-    <input type="number" [(ngModel)]="days" min="1" max="30" />
-  </div>
+      <div class="interests-container">
+        <p class="section-label">Interests</p>
+        <div class="interests-grid">
+          <mat-checkbox *ngFor="let cat of availableCategories" 
+                        [(ngModel)]="cat.selected"
+                        (change)="updateCategories(cat)">
+            {{ cat.name }}
+          </mat-checkbox>
+        </div>
+      </div>
 
-  <button (click)="runTest()">Generate test itinerary</button>
+      <div class="budget-container">
+        <p>Daily Budget: <strong>${{ maxDailyBudget }}</strong></p>
+        
+        <mat-slider
+          min="10"
+          max="100"
+          step="5"
+          discrete
+          color="primary"
+          [(ngModel)]="maxDailyBudget">
+        </mat-slider>
 
-  <p><b>Status:</b> {{ status }}</p>
-  <p *ngIf="lastItineraryId"><b>Last itineraryId:</b> {{ lastItineraryId }}</p>
+        <p class="total-hint">
+          Total for {{ days }} days: <strong>${{ totalBudget }}</strong>
+        </p>
+      </div>
+    </mat-card-content>
 
-  <p style="opacity:0.7;">
-    Tip: deschide DevTools → Console ca sa vezi POI-urile si schedule-ul.
-  </p>
+    <mat-card-actions align="end">
+      <span class="status-text" [attr.data-status]="status">{{ status }}</span>
+      <button mat-flat-button color="primary" 
+              (click)="runTest()" 
+              [disabled]="status === 'Generating...'">
+        {{ status === 'Generating...' ? 'Creating...' : 'Generate Itinerary' }}
+      </button>
+    </mat-card-actions>
+  </mat-card>
 </div>
