@@ -16,13 +16,19 @@
                 <mat-list *ngIf="history.length > 0; else noData">
                     <mat-list-item 
                         *ngFor="let item of history; let isFirst = first" 
-                        [class.highlighted]="isFirst"
+                        [class.highlighted-recent]="isFirst"
                         [class.active-selection]="selectedItinerary?.itineraryId === item.itineraryId"
                         (click)="selectItinerary(item)">
                         
-                        <div mat-line><strong>{{ item.cityId | titlecase }}</strong></div>
-                        <div mat-line>{{ item.days }} days — Total Est: ${{ item.totalCost }}</div>
-                        
+                        <div mat-line class="title-row">
+                            <strong>{{ item.cityId | titlecase }}</strong>
+                            <span *ngIf="isFirst" class="recent-badge">MOST RECENT</span>
+                        </div>
+
+                        <div mat-line class="details-line">
+                            {{ item.days }} days — Total Est: ${{ item.totalCost }}
+                        </div>
+
                         <div class="list-actions" (click)="$event.stopPropagation()">
                             <button mat-icon-button (click)="exportAsPdf(item)" title="Export PDF">
                                 <mat-icon>picture_as_pdf</mat-icon>
