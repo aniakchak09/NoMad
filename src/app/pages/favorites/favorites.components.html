@@ -13,9 +13,12 @@
       <div class="schedule-details">
         <h3>Detailed Schedule:</h3>
         <div *ngFor="let day of item.schedule | keyvalue">
-          <strong>{{ day.key }}:</strong>
+          <strong>{{ day.key | titlecase }}:</strong>
           <ul>
-            <li *ngFor="let poi of day.value">{{ poi }}</li>
+            <li *ngFor="let act of day.value">
+              <small>{{ act.startTime }}</small> — <b>{{ act.poiName }}</b>
+              <span *ngIf="act.note" class="fav-note"> ({{ act.note }})</span>
+            </li>
           </ul>
         </div>
       </div>

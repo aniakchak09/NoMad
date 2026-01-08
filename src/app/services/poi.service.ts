@@ -11,6 +11,8 @@ export interface Poi {
   priceRange?: string;     // ex: "40-60"
   openingHours?: string;
   estimatedTime?: number;
+  latitude?: number;
+  longitude?: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -34,28 +36,24 @@ export class PoiService {
    */
   async getPoisByCity(cityId: string, categories?: string[]): Promise<Poi[]> {
     const query = this.layer.createQuery();
-    query.returnGeometry = false;
+    
+    // 2. IMPORTANT: Change this to true so we get the location data
+    query.returnGeometry = true; 
 
-    // ✅ filtre pe campurile reale din layer
     query.where = this.buildWhereClause(cityId, categories);
-
-    // ✅ campurile pe care le folosim in aplicatie
-    query.outFields = [
-      'poiId',
-      'cityId',
-      'name',
-      'attractionType',
-      'rating',
-      'priceRange',
-      'openingHours',
-      'estimatedTime'
-    ];
+    query.outFields = ['*']; // Or explicitly add your fields
 
     const res = await this.layer.queryFeatures(query);
 
-    return (res.features || [])
-      .map((g: Graphic) => g.attributes as Poi)
-      .filter(p => !!p?.poiId);
+    return (res.features || []).map((g: Graphic) => {
+      const attr = g.attributes as Poi;
+      // 3. Map the ArcGIS geometry to our Poi object
+      return {
+        ...attr,
+        latitude: (g.geometry as any)?.y,
+        longitude: (g.geometry as any)?.x
+      };
+    }).filter(p => !!p?.poiId);
   }
 
   /**
@@ -85,5 +83,27 @@ export class PoiService {
 
   private escapeQuotes(value: string): string {
     return String(value).replace(/'/g, "''");
+  }
+
+  /**
+ * Fallback: Use ArcGIS Geocoding if coordinates are missing in the layer
+ */
+  async getCoordinatesFallback(poiName: string, city: string): Promise<{lat: number, lon: number} | null> {
+    const apiKey = 'YOUR_ARCGIS_API_KEY';
+    const url = `https://geocode-api.arcgis.com/arcgis/rest/services/World/GeocodeServer/findAddressCandidates?address=${encodeURIComponent(poiName + ',' + city)}&f=json&token=${apiKey}&maxLocations=1`;
+
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.candidates && data.candidates.length > 0) {
+        return {
+          lat: data.candidates[0].location.y,
+          lon: data.candidates[0].location.x
+        };
+      }
+    } catch (e) {
+      console.error("Geocoding failed", e);
+    }
+    return null;
   }
 }

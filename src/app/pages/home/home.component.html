@@ -92,8 +92,20 @@
 
                                     <mat-list dense>
                                         <mat-list-item *ngFor="let activity of selectedItinerary.schedule[dayKey]">
-                                            <mat-icon mat-list-icon>place</mat-icon>
-                                            <div mat-line>{{ activity }}</div>
+                                            <mat-icon mat-list-icon>history_toggle_off</mat-icon>
+                                            <div mat-line>
+                                                <span class="time-badge">{{ activity.startTime }}</span>
+                                                <strong>{{ activity.poiName }}</strong>
+                                            </div>
+                                            
+                                            <div mat-line class="activity-meta" *ngIf="activity.travelTimeAfter || activity.note">
+                                                <span *ngIf="activity.travelTimeAfter" class="travel-text">
+                                                    {{ activity.travelTimeAfter }} min travel
+                                                </span>
+                                                <span *ngIf="activity.note" class="note-text">
+                                                    {{ activity.note }}
+                                                </span>
+                                            </div>
                                         </mat-list-item>
                                     </mat-list>
                                 </mat-expansion-panel>

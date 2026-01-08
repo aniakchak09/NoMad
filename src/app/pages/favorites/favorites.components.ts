@@ -27,7 +27,7 @@ export class FavoritesComponent implements OnInit {
           ref.orderByChild('userId').equalTo(user.uid)
         ).valueChanges().pipe(
           // Filter client-side for favorites
-          map(list => list.filter(item => item.isFavorite === true))
+          map(list => list.filter(item => item.isFavorite === true).reverse())
         );
       })
     );

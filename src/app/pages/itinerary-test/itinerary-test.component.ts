@@ -11,6 +11,7 @@ import { ItineraryService, Preferences } from '../../services/itinerary.service'
 })
 export class ItineraryTestComponent implements OnInit {
   status = 'Idle';
+  days = 3;
   
   // New structured fields
   city = 'bucuresti';
@@ -31,8 +32,6 @@ export class ItineraryTestComponent implements OnInit {
     { id: 'landmark', name: 'Landmarks', selected: false },
     { id: 'leisure', name: 'Leisure Spots', selected: false }
   ];
-
-  days = 3;
 
   constructor(
     private afAuth: AngularFireAuth,
@@ -98,23 +97,17 @@ export class ItineraryTestComponent implements OnInit {
       }
 
       const scheduleWithPoiIds = this.itineraryService.generateSchedule(pois, prefs);
-      const poiMap = new Map<string, Poi>(pois.map(poi => [poi.poiId, poi]));
-      const scheduleWithNames: Record<string, string[]> = {};
       const usedPoiIds = new Set<string>();
 
-      for (const day in scheduleWithPoiIds) {
-          const poiNamesForDay: string[] = [];
-          for (const poiId of scheduleWithPoiIds[day]) {
-              const poi = poiMap.get(poiId);
-              if (poi) {
-                  poiNamesForDay.push(poi.name);
-                  usedPoiIds.add(poiId);
-              }
-          }
-          scheduleWithNames[day] = poiNamesForDay;
-      }
+      Object.values(scheduleWithPoiIds).forEach(dayActivities => {
+        dayActivities.forEach(act => {
+          // Find the original POI object by name to get its priceRange
+          const poi = pois.find(p => p.name === act.poiName);
+          if (poi) usedPoiIds.add(poi.poiId);
+        });
+      });
 
-      const usedPois = Array.from(usedPoiIds).map(id => poiMap.get(id)).filter((p): p is Poi => !!p);
+      const usedPois = pois.filter(p => usedPoiIds.has(p.poiId));
       const totalCost = this.itineraryService.estimateTotalCost(usedPois);
 
       await this.itineraryService.saveItinerary(
@@ -122,7 +115,7 @@ export class ItineraryTestComponent implements OnInit {
         this.city,
         prefs.days,
         totalCost,
-        scheduleWithNames
+        scheduleWithPoiIds
       );
 
       this.status = 'Done!';
