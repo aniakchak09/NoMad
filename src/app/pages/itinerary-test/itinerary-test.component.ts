@@ -91,14 +91,31 @@ export class ItineraryTestComponent implements OnInit {
       // Fetch POIs using the city dropdown value
       const pois = await this.poiService.getPoisByCity(this.city, prefs.categories);
 
-      if (!pois.length) {
-        this.status = 'ERROR: No locations found for these criteria.';
+      // 2. THE CRITICAL VALIDATION CHECK
+      // We calculate the minimum POIs needed (e.g., at least 1.5 per day on average)
+      const minRequiredPois = prefs.days * 1.5; 
+
+      if (pois.length < minRequiredPois) {
+        this.status = 'INSUFFICIENT DATA: Try selecting more categories or decreasing the number of days.';
         return;
       }
 
-      const scheduleWithPoiIds = this.itineraryService.generateSchedule(pois, prefs);
-      const usedPoiIds = new Set<string>();
+      // 3. Check if budget is realistically too low (Average cost check)
+      const avgCost = this.itineraryService.estimateTotalCost(pois) / pois.length;
+      if (prefs.budget && prefs.budget < (avgCost * prefs.days)) {
+          this.status = 'BUDGET WARNING: Your budget may be too low for this many days. Try increasing it.';
+          // We continue anyway, but the status informs the user why the result might be short
+      }
 
+      const scheduleWithPoiIds = this.itineraryService.generateSchedule(pois, prefs);
+      // 4. Verify if the last day actually has content
+      const lastDayKey = `day${prefs.days}`;
+      if (!scheduleWithPoiIds[lastDayKey] || scheduleWithPoiIds[lastDayKey].length === 0) {
+        this.status = 'LIMIT REACHED: Not enough activities to fill all days. Decrease days or add categories.';
+        return;
+      }
+
+      const usedPoiIds = new Set<string>();
       Object.values(scheduleWithPoiIds).forEach(dayActivities => {
         dayActivities.forEach(act => {
           // Find the original POI object by name to get its priceRange
@@ -109,6 +126,11 @@ export class ItineraryTestComponent implements OnInit {
 
       const usedPois = pois.filter(p => usedPoiIds.has(p.poiId));
       const totalCost = this.itineraryService.estimateTotalCost(usedPois);
+
+      if (prefs.budget && totalCost > prefs.budget) {
+        this.status = 'BUDGET EXCEEDED: Generated itinerary exceeds your budget. Try increasing it.';
+        return;
+      }
 
       await this.itineraryService.saveItinerary(
         user.uid,
