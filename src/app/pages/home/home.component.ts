@@ -3,7 +3,7 @@ import { AngularFireAuth } from "@angular/fire/compat/auth";
 import { AngularFireDatabase } from "@angular/fire/compat/database";
 import { Observable, of } from "rxjs";
 import { switchMap, map } from "rxjs/operators";
-import { Itinerary, ItineraryService } from "../../services/itinerary.service";
+import { Itinerary, ItineraryService, ScheduledActivity } from "../../services/itinerary.service";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
 
@@ -91,12 +91,15 @@ export class HomeComponent implements OnInit {
         const sortedDays = this.getScheduleDays(item.schedule);
 
         sortedDays.forEach(dayKey => {
-        // Joins activity IDs with a newline and bullet point
-        const activities = item.schedule[dayKey].join('\n• ');
-        tableRows.push([
-            dayKey.toUpperCase(),
-            `• ${activities}`
-        ]);
+            // Transform the objects into readable strings for the PDF
+            const activities = item.schedule[dayKey]
+                .map(act => `${act.startTime} - ${act.poiName}${act.note ? ' (' + act.note + ')' : ''}`)
+                .join('\n• ');
+
+            tableRows.push([
+                dayKey.toUpperCase(),
+                `• ${activities}`
+            ]);
         });
 
         // Create Table
@@ -123,12 +126,11 @@ export class HomeComponent implements OnInit {
     }
 
     // Add this helper method to your HomeComponent class
-    getScheduleDays(schedule: Record<string, string[]> | undefined): string[] {
+    getScheduleDays(schedule: Record<string, ScheduledActivity[]> | undefined): string[] {
         if (!schedule) return [];
-        // This returns ['day1', 'day2', ...] sorted correctly
         return Object.keys(schedule).sort((a, b) => {
-            const numA = parseInt(a.replace(/\D/g, ''));
-            const numB = parseInt(b.replace(/\D/g, ''));
+            const numA = parseInt(a.replace('day', ''));
+            const numB = parseInt(b.replace('day', ''));
             return numA - numB;
         });
     }
