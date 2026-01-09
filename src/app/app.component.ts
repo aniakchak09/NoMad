@@ -35,6 +35,10 @@ export class AppComponent implements OnInit {
     {
       name: 'Favorites',
       link: '/favorites'
+    }, 
+    {
+      name: 'Statistics',
+      link: '/statistics'
     }
   ];
 

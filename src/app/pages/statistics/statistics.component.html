@@ -1,0 +1,133 @@
+<div class="statistics-container">
+  <header class="stats-header">
+    <h1>Profilul Tău de Călător</h1>
+    <p class="subtitle">Descoperă ce tip de călător ești pe baza itinerariilor tale</p>
+  </header>
+
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Se încarcă statisticile...</p>
+  </div>
+
+  <div *ngIf="(stats$ | async) as stats; else noStats" class="stats-content">
+    <mat-card class="traveler-profile-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon class="profile-icon">person</mat-icon>
+          {{ stats.travelerType }}
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <p class="profile-description">{{ stats.travelerDescription }}</p>
+        
+        <div class="stats-grid">
+          <div class="stat-item">
+            <mat-icon>map</mat-icon>
+            <div class="stat-details">
+              <span class="stat-value">{{ stats.totalItineraries }}</span>
+              <span class="stat-label">Itinerarii Create</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <mat-icon>event</mat-icon>
+            <div class="stat-details">
+              <span class="stat-value">{{ stats.totalDays }}</span>
+              <span class="stat-label">Zile Totale</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <mat-icon>attach_money</mat-icon>
+            <div class="stat-details">
+              <span class="stat-value">{{ stats.totalCost }} Lei</span>
+              <span class="stat-label">Buget Total</span>
+            </div>
+          </div>
+          
+          <div class="stat-item">
+            <mat-icon>calculate</mat-icon>
+            <div class="stat-details">
+              <span class="stat-value">{{ stats.avgCostPerDay }} Lei</span>
+              <span class="stat-label">Cost Mediu/Zi</span>
+            </div>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="charts-container">
+      <mat-card class="chart-card">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>category</mat-icon>
+            Preferințe pe Categorii
+          </mat-card-title>
+          <mat-card-subtitle>Tipurile de atracții vizitate</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-wrapper">
+            <canvas #categoryChart></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="chart-card" *ngIf="budgetChartData.length > 0">
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>account_balance_wallet</mat-icon>
+            Distribuția Bugetelor
+          </mat-card-title>
+          <mat-card-subtitle>Categoriile de preț ale itinerariilor</mat-card-subtitle>
+        </mat-card-header>
+        <mat-card-content>
+          <div class="chart-wrapper">
+            <canvas #budgetChart></canvas>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <mat-card class="details-card" *ngIf="categoryChartData.length > 0">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>list</mat-icon>
+          Detalii Categorii
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <table class="category-table">
+          <thead>
+            <tr>
+              <th>Categorie</th>
+              <th>Număr Vizite</th>
+              <th>Procentaj</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of categoryChartData">
+              <td>
+                <span class="category-indicator" [style.background-color]="item.color"></span>
+                {{ item.name }}
+              </td>
+              <td>{{ item.value }}</td>
+              <td>{{ (item.value / getTotalVisits() * 100).toFixed(1) }}%</td>
+            </tr>
+          </tbody>
+        </table>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <ng-template #noStats>
+    <div class="no-stats" *ngIf="!loading">
+      <mat-icon class="no-stats-icon">bar_chart</mat-icon>
+      <h2>Nu există încă statistici</h2>
+      <p>Creează primul tău itinerariu pentru a vedea statistici!</p>
+      <button mat-raised-button color="primary" routerLink="/map">
+        <mat-icon>add</mat-icon>
+        Creează Itinerariu
+      </button>
+    </div>
+  </ng-template>
+</div>

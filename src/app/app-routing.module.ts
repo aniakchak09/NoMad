@@ -6,6 +6,7 @@ import { ItineraryTestComponent } from './pages/itinerary-test/itinerary-test.co
 import { LoginComponent } from './pages/login/login.component';
 import { AuthGuard } from './guards/auth.guard';
 import { FavoritesComponent } from './pages/favorites/favorites.components';
+import { StatisticsComponent } from './pages/statistics/statistics.component';
 
 
 export const routes: Routes = [
@@ -27,6 +28,11 @@ export const routes: Routes = [
   {
     path: 'favorites',
     component: FavoritesComponent,
+    canActivate: [AuthGuard]
+  },
+  {
+    path: 'statistics',
+    component: StatisticsComponent,
     canActivate: [AuthGuard]
   },
   { 
