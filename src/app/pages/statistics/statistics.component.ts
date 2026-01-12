@@ -1,7 +1,7 @@
 import { Component, OnInit, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { AngularFireAuth } from '@angular/fire/compat/auth';
 import { AngularFireDatabase } from '@angular/fire/compat/database';
-import { Observable, of } from 'rxjs';
+import { Observable, of, forkJoin } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { Itinerary } from '../../services/itinerary.service';
 import { Poi, PoiService } from '../../services/poi.service';
@@ -62,7 +62,9 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    // Charts will be created after data loads
+    console.log('ngAfterViewInit called');
+    console.log('categoryChartRef:', this.categoryChartRef);
+    console.log('budgetChartRef:', this.budgetChartRef);
   }
 
   loadStatistics(): void {
@@ -78,10 +80,21 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
               this.loading = false;
               if (itineraries.length === 0) return null;
               
+              // --- LOGGING NOU PENTRU ULTIMUL ITINERARIU ---
+              // Luăm ultimul element din listă (cel mai recent)
+              const lastItinerary = itineraries[itineraries.length - 1];
+              
+              console.log('🔰 === ULTIMUL ITINERARIU CREAT (RAW DATA) === 🔰');
+              // Afișăm obiectul interactiv
+              console.log(lastItinerary);
+              // Afișăm și ca text complet pentru a vedea structura exactă (JSON)
+              console.log(JSON.stringify(lastItinerary, null, 2));
+              console.log('--------------------------------------------------');
+              // ---------------------------------------------
+              
               const stats = await this.calculateStats(itineraries);
               this.statsData = stats;
               
-              // Create charts after data is ready
               setTimeout(() => this.createCharts(), 100);
               
               return stats;
@@ -95,36 +108,159 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
   }
 
   async calculateStats(itineraries: Itinerary[]): Promise<TravelerStats> {
+    console.log('=== CALCULATE STATS CALLED ===');
+    console.log('Total itineraries:', itineraries.length);
+    console.log('Itineraries:', itineraries);
+    
+    // DEBUGGING - verificăm primul itinerariu în detaliu
+    if (itineraries.length > 0) {
+      const firstIt = itineraries[0];
+      console.log('FIRST ITINERARY DETAILS:');
+      console.log('  itineraryId:', firstIt.itineraryId);
+      console.log('  cityId:', firstIt.cityId);
+      console.log('  days:', firstIt.days);
+      console.log('  schedule:', firstIt.schedule);
+      console.log('  schedule type:', typeof firstIt.schedule);
+      if (firstIt.schedule) {
+        console.log('  schedule keys:', Object.keys(firstIt.schedule));
+        const firstDayKey = Object.keys(firstIt.schedule)[0];
+        console.log('  first day key:', firstDayKey);
+        console.log('  first day value:', firstIt.schedule[firstDayKey]);
+      }
+    }
+    
     const totalItineraries = itineraries.length;
     const totalDays = itineraries.reduce((sum, it) => sum + it.days, 0);
     const totalCost = itineraries.reduce((sum, it) => sum + it.totalCost, 0);
     const avgCostPerDay = totalDays > 0 ? Math.round(totalCost / totalDays) : 0;
 
-    const allPoiIds = new Set<string>();
-    itineraries.forEach(it => {
-    if (it.schedule) {
-      Object.values(it.schedule).forEach(dayPois => {
-        // Corecție aici: verificăm dacă poiId este string sau obiect
-        dayPois.forEach((item: any) => {
-          const id = typeof item === 'string' ? item : item.poiId;
-          if (id) allPoiIds.add(id);
-        });
-      });
-    }
-  });
-
-    const allPois = await this.poiService.getPoisByCity('bucharest');
-    const poiMap = new Map(allPois.map(p => [p.poiId, p]));
-
-    const categoryDistribution: { [key: string]: number } = {};
+    // Colectăm toate cityId-urile unice din itinerarii
+    const cityIds = new Set<string>();
+    const allPoiIds: string[] = [];
     
-    allPoiIds.forEach(poiId => {
-      const poi = poiMap.get(poiId);
-      if (poi && poi.attractionType) {
-        categoryDistribution[poi.attractionType] = 
-          (categoryDistribution[poi.attractionType] || 0) + 1;
+    console.log('=== EXTRACTING POIs FROM ITINERARIES ===');
+    
+    itineraries.forEach((it, index) => {
+      // Adăugăm cityId-ul
+      if (it.cityId) {
+        cityIds.add(it.cityId.toLowerCase());
+      }
+      
+      // Colectăm POI-urile
+      if (it.schedule) {
+        Object.values(it.schedule).forEach((dayPois: any) => {
+          // Asigurăm că avem un array
+          const poisArray = Array.isArray(dayPois) ? dayPois : Object.values(dayPois);
+          
+          poisArray.forEach((item: any) => {
+            // AICI ERA PROBLEMA: Trebuie să verificăm și 'poiName'
+            let extractId = null;
+
+            if (typeof item === 'string') {
+                extractId = item;
+            } else {
+                // Ordinea priorităților: poiId -> poiName -> name
+                extractId = item.poiId || item.poiName || item.name;
+            }
+
+            if (extractId) {
+              allPoiIds.push(extractId);
+            } else {
+                console.warn('Nu am putut extrage numele din item:', item);
+            }
+          });
+        });
       }
     });
+
+    console.log('City IDs found:', Array.from(cityIds));
+    console.log('POI IDs found:', Array.from(allPoiIds));
+
+    // Încărcăm POI-urile pentru toate orașele
+    const allPois: Poi[] = [];
+    
+    try {
+      // Obținem POI-uri pentru fiecare oraș unic (folosim direct cityIds-urile)
+      // Valorile din baza de date sunt: 'bucuresti', 'paris', 'london' (lowercase)
+      const uniqueCities = Array.from(cityIds);
+
+      console.log('Loading POIs for cities:', uniqueCities);
+
+      for (const cityId of uniqueCities) {
+        try {
+          const cityPois = await this.poiService.getPoisByCity(cityId);
+          allPois.push(...cityPois);
+          console.log(`Loaded ${cityPois.length} POIs for ${cityId}`);
+        } catch (error) {
+          console.error(`Error loading POIs for ${cityId}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('Error loading POIs:', error);
+    }
+
+    console.log('Total POIs loaded:', allPois.length);
+    
+    // Debug: să vedem cum arată un POI
+    if (allPois.length > 0) {
+      console.log('Sample POI structure:', allPois[0]);
+      console.log('Sample POI keys:', Object.keys(allPois[0]));
+    }
+
+    // Creăm două map-uri: unul cu poiId și unul cu name
+    const poiMapById = new Map(allPois.map(p => [p.poiId, p]));
+    const poiMapByName = new Map(allPois.map(p => [p.name, p]));
+
+    const categoryDistribution: { [key: string]: number } = {};
+    const notFoundPois: string[] = [];
+    
+    console.log('Processing POI IDs...');
+
+    // Funcție helper pentru a elimina diacriticele (ex: â -> a)
+    const normalizeString = (str: string) => 
+      str.toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .trim();
+
+    allPoiIds.forEach(poiId => {
+      const normalizedSearch = normalizeString(poiId);
+
+      // 1. Încercăm match direct în Map-uri
+      let poi = poiMapById.get(poiId) || poiMapByName.get(poiId);
+      
+      // 2. Dacă nu am găsit, căutăm după numele normalizat (fără diacritice)
+      if (!poi) {
+        poi = allPois.find(p => {
+          const normalizedPoiName = normalizeString(p.name);
+          return normalizedPoiName === normalizedSearch || 
+                normalizedPoiName.includes(normalizedSearch) ||
+                normalizedSearch.includes(normalizedPoiName);
+        });
+      }
+      
+      if (poi) {
+        const type = poi.attractionType;
+        if (type) {
+          // Deoarece allPoiIds este acum Array, aici se va aduna frecvența reală
+          categoryDistribution[type] = (categoryDistribution[type] || 0) + 1;
+          console.log('✓ Found POI:', poiId, '→', type);
+        } else {
+          console.warn('⚠ POI fără attractionType:', poiId, poi);
+        }
+      } else {
+        console.error('✗ POI NOT FOUND:', poiId);
+        notFoundPois.push(poiId);
+      }
+    });
+    
+    if (notFoundPois.length > 0) {
+      console.warn('=== POI-uri negăsite în baza de date ===');
+      console.warn('Total POI-uri negăsite:', notFoundPois.length);
+      console.warn('Lista:', notFoundPois);
+    }
+
+    console.log('Category distribution:', categoryDistribution);
 
     const { travelerType, travelerDescription } = this.determineTravelerType(
       categoryDistribution, 
@@ -155,6 +291,13 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
       .sort(([, a], [, b]) => b - a);
     
     const totalActivities = Object.values(categories).reduce((a, b) => a + b, 0);
+
+    if (totalActivities === 0) {
+      return {
+        travelerType: 'Începător',
+        travelerDescription: 'Încă explorezi și descoperi ce tipuri de atracții îți plac.'
+      };
+    }
 
     if ((categories['museum'] || 0) + (categories['culture'] || 0) > totalActivities * 0.5) {
       return {
@@ -212,6 +355,8 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
         color: this.categoryColors[name] || '#999999'
       }))
       .sort((a, b) => b.value - a.value);
+    
+    console.log('Category chart data:', this.categoryChartData);
   }
 
   prepareBudgetChartData(itineraries: Itinerary[]): void {
@@ -243,7 +388,21 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
   }
 
   createCharts(): void {
-    if (!this.categoryChartRef || !this.budgetChartRef) return;
+    console.log('=== CREATE CHARTS CALLED ===');
+    console.log('categoryChartRef exists:', !!this.categoryChartRef);
+    console.log('budgetChartRef exists:', !!this.budgetChartRef);
+    console.log('categoryChartData length:', this.categoryChartData.length);
+    console.log('categoryChartData:', this.categoryChartData);
+    
+    if (!this.categoryChartRef || !this.budgetChartRef) {
+      console.warn('Chart refs not available yet');
+      return;
+    }
+
+    if (this.categoryChartData.length === 0) {
+      console.warn('No category data available for chart');
+      return;
+    }
 
     this.createCategoryChart();
     this.createBudgetChart();
@@ -252,6 +411,11 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
   createCategoryChart(): void {
     if (this.categoryChart) {
       this.categoryChart.destroy();
+    }
+
+    if (!this.categoryChartRef?.nativeElement) {
+      console.error('Category chart canvas not found');
+      return;
     }
 
     const ctx = this.categoryChartRef.nativeElement.getContext('2d');
@@ -295,6 +459,7 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
     };
 
     this.categoryChart = new Chart(ctx, config);
+    console.log('Category chart created successfully');
   }
 
   createBudgetChart(): void {
@@ -360,8 +525,8 @@ export class StatisticsComponent implements OnInit, AfterViewInit {
   }
 
   getTotalVisits(): number {
-  return this.categoryChartData.reduce((sum, item) => sum + item.value, 0);
-}
+    return this.categoryChartData.reduce((sum, item) => sum + item.value, 0);
+  }
 
   ngOnDestroy(): void {
     if (this.categoryChart) this.categoryChart.destroy();
