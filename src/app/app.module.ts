@@ -36,6 +36,9 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSliderModule } from '@angular/material/slider';
 import { CommonModule } from '@angular/common';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
+import { StatisticsComponent } from './pages/statistics/statistics.component';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+
 
 
 @NgModule({
@@ -45,7 +48,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     MapComponent,
     ItineraryTestComponent,
     LoginComponent,
-    FavoritesComponent
+    FavoritesComponent,
+    StatisticsComponent
   ],
   imports: [
     BrowserModule,
@@ -71,7 +75,8 @@ import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
     MatSelectModule,
     MatInputModule,
     MatCheckboxModule,
-    MatSliderModule
+    MatSliderModule,
+    MatProgressSpinnerModule
   ],
   providers: [],
   bootstrap: [AppComponent]

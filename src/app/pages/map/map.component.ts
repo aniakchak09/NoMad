@@ -27,6 +27,14 @@ import FeatureSet from '@arcgis/core/rest/support/FeatureSet';
 import RouteParameters from '@arcgis/core/rest/support/RouteParameters';
 import * as route from "@arcgis/core/rest/route.js";
 
+import { ActivatedRoute, Router } from '@angular/router';
+import { AngularFireDatabase } from '@angular/fire/compat/database';
+import { PoiService, Poi } from '../../services/poi.service';
+import { Itinerary } from '../../services/itinerary.service';
+import { take } from 'rxjs/operators';
+import esriConfig from "@arcgis/core/config";
+import * as webMercatorUtils from "@arcgis/core/geometry/support/webMercatorUtils";
+
 @Component({
   selector: "app-map",
   templateUrl: "./map.component.html",
@@ -36,6 +44,12 @@ export class MapComponent implements OnInit, OnDestroy {
   @Output() mapLoadedEvent = new EventEmitter<boolean>();
 
   @ViewChild("mapViewNode", { static: true }) private mapViewEl: ElementRef;
+
+  cityCoordinates: { [key: string]: number[] } = {
+    'bucuresti': [26.1025, 44.4268],
+    'london': [-0.1276, 51.5072],
+    'paris': [2.3522, 48.8566]
+  };
 
   map: esri.Map;
   view: esri.MapView;
@@ -54,18 +68,38 @@ export class MapComponent implements OnInit, OnDestroy {
   loaded = false;
   directionsElement: any;
 
-  constructor() { }
+  // Variabile noi pentru Itinerariu
+  activeItinerary: Itinerary | null = null;
+  itineraryDays: string[] = [];
+  cityPoisCache: Poi[] = []; // Păstrăm POI-urile orașului curent aici
+  routeDistance: string = '';
+  routeDuration: string = '';
+
+  constructor(
+    private route: ActivatedRoute, // Injectează ActivatedRoute
+    private router: Router,
+    private db: AngularFireDatabase,
+    private poiService: PoiService
+  ) {}
 
   ngOnInit() {
     this.initializeMap().then(() => {
       this.loaded = this.view.ready;
       this.mapLoadedEvent.emit(true);
+
+      // ASCULTĂ PARAMETRII URL DUPĂ CE HARTA E GATA
+      this.route.queryParams.subscribe(async params => {
+        const itineraryId = params['itineraryId'];
+        if (itineraryId) {
+          await this.loadItineraryAndRoute(itineraryId);
+        }
+      });
     });
   }
 
   async initializeMap() {
     try {
-      // Am eliminat Config.apiKey
+      esriConfig.apiKey = "AAPTxy8BH1VEsoebNVZXo8HurFyyZCp13vKIQaE64eR0LW_dLDaVajrDxzCQNd8bgxxU7EF6bsa0OyTDNuKw2VLhbz6M57iJgo7H6gSgJytX4oK8M4tWbTYLNiNefWtKZ2y7qkGo-CczIVKPF9qyDLWFkZb5PT4EOQjVk0wlqYjJLkEArhfYgsKkSEsypEDl8AHCFKb8Oh__CsooklFAk3YaTOOezttyFOcTLO2z_gnnx7g.AT1_xRKMaHTA";
 
       // 1. Definim Proprietățile Hărții
       const mapProperties: esri.MapProperties = { // Folosim MapProperties
@@ -96,9 +130,13 @@ export class MapComponent implements OnInit, OnDestroy {
       this.addRouting(); 
       
       return this.view;
-    } catch (error) {
-      console.error("Error loading the map: ", error);
-      alert("Error loading the map");
+    } catch (error: any) {
+      // MODIFICARE AICI: Loghează eroarea completă
+      console.error("Detaliile erorii de rutare:", error);
+      
+      // Verifică dacă există un mesaj specific în eroare
+      const errorMsg = error.details?.message || error.message || "Eroare necunoscută";
+      alert("Error calculating route: " + errorMsg);
     }
   }
 
@@ -248,7 +286,11 @@ export class MapComponent implements OnInit, OnDestroy {
               this.addPoint(point.latitude, point.longitude);
             } else if (this.graphicsLayerUserPoints.graphics.length === 1) {
               this.addPoint(point.latitude, point.longitude);
-              this.calculateRoute(routeUrl);
+              // --- FIX AICI ---
+              // Trebuie să trimitem lista de grafice (stops) ca al doilea argument
+              const currentStops = this.graphicsLayerUserPoints.graphics.toArray();
+              this.calculateRoute(routeUrl, currentStops);
+              // ----------------
             } else {
               this.removePoints();
             }
@@ -258,10 +300,14 @@ export class MapComponent implements OnInit, OnDestroy {
     });
   }
 
-  addPoint(lat: number, lng: number) {
-    let point = new Point({
-      longitude: lng,
-      latitude: lat
+  // map.component.ts
+
+  addPoint(lat: number, lng: number): Graphic {
+    // FIX 1: Definim explicit SpatialReference la creare
+    const point = new Point({
+      longitude: Number(lng),
+      latitude: Number(lat),
+      spatialReference: { wkid: 4326 } // 4326 = WGS84 (Lat/Long standard)
     });
 
     const simpleMarkerSymbol = {
@@ -273,13 +319,151 @@ export class MapComponent implements OnInit, OnDestroy {
       }
     };
 
-    let pointGraphic: esri.Graphic = new Graphic({
+    const pointGraphic = new Graphic({
       geometry: point,
-      symbol: simpleMarkerSymbol
+      symbol: simpleMarkerSymbol,
+      attributes: { 
+        id: "stop_point",
+        time: Date.now(),
+        Name: "Punct" // ArcGIS Route are nevoie uneori de un nume
+      }
     });
 
     this.graphicsLayerUserPoints.add(pointGraphic);
+    
+    return pointGraphic;
   }
+
+  goToCity(city: string) {
+    if (!city) return;
+
+    // 1. Normalizăm cheia (totul cu litere mici) pentru a potrivi cu dicționarul
+    const cityKey = city.toLowerCase();
+    const coords = this.cityCoordinates[cityKey];
+
+    if (this.view && coords) {
+      console.log(`Centrare hartă pe ${city} [${coords}]`);
+      
+      this.view.goTo({
+        center: coords,
+        zoom: 12 // Poți mări la 13 sau 14 pentru a fi mai aproape de centru
+      }, {
+        duration: 1500, // Animație puțin mai lungă și fluidă
+        easing: "ease-in-out"
+      });
+    } else {
+      console.warn(`Nu am găsit coordonate pentru orașul: ${city} (Cheie: ${cityKey})`);
+    }
+  }
+
+  async loadItineraryAndRoute(itineraryId: string) {
+    console.log("Loading itinerary route for:", itineraryId);
+    
+    // 1. Luăm itinerariul din Firebase
+    // FIX: Folosim valueChanges() + pipe(take(1)) în loc de .get()
+    const itinerary = await this.db.object<Itinerary>(`itineraries/${itineraryId}`)
+      .valueChanges()
+      .pipe(take(1))
+      .toPromise();
+
+    if (!itinerary) return;
+
+    this.activeItinerary = itinerary;
+    
+    // 2. Setăm zilele disponibile (day1, day2...)
+    this.itineraryDays = Object.keys(itinerary.schedule || {}).sort((a, b) => {
+        const nA = parseInt(a.replace('day', ''));
+        const nB = parseInt(b.replace('day', ''));
+        return nA - nB;
+    });
+
+    // 3. Mergem la orașul respectiv
+    this.goToCity(itinerary.cityId);
+
+    // 4. Încărcăm POI-urile orașului pentru a avea coordonatele (Latitude/Longitude)
+    // Avem nevoie de asta pentru că itinerariul are doar Numele, nu și coordonatele
+    this.cityPoisCache = await this.poiService.getPoisByCity(itinerary.cityId);
+
+    // 5. Desenăm ruta pentru prima zi
+    if (this.itineraryDays.length > 0) {
+        this.visualizeDay(this.itineraryDays[0]);
+    }
+  }
+
+  // Când utilizatorul schimbă ziua din Dropdown
+  onDayChange(event: any) {
+    const selectedDay = event.target.value;
+    this.visualizeDay(selectedDay);
+  }
+
+  // Funcția care desenează efectiv ruta
+  visualizeDay(dayKey: string) {
+    if (!this.activeItinerary || !this.activeItinerary.schedule[dayKey]) return;
+
+    // Curățăm harta
+    this.clearRouter();
+
+    const activities = this.activeItinerary.schedule[dayKey];
+    
+    // --- CALCUL DURATĂ ITINERARIU (MODIFICARE NOUĂ) ---
+    if (activities.length > 0) {
+        // Luăm ora de start a primei activități
+        const firstActivity = activities[0];
+        // Luăm ora de final a ultimei activități
+        const lastActivity = activities[activities.length - 1];
+
+        const startMins = this.timeToMinutes(firstActivity.startTime);
+        const endMins = this.timeToMinutes(lastActivity.endTime);
+
+        const totalDurationMins = endMins - startMins;
+
+        // Formatăm afișarea (ex: 5h 30m)
+        const hrs = Math.floor(totalDurationMins / 60);
+        const mins = totalDurationMins % 60;
+        this.routeDuration = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    }
+    // --------------------------------------------------
+
+    const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
+
+    console.log(`Visualizing ${dayKey} with ${activities.length} stops`);
+
+    // ... restul codului (normalizare, loop prin activități, etc.) ...
+    
+    const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+    const stopsForRoute: Graphic[] = [];
+    // ... restul funcției rămâne neschimbat până la apelul calculateRoute ...
+    
+    for (const activity of activities) {
+        // ... logica ta de căutare POI ...
+         const searchName = normalize(activity.poiName);
+
+        const match = this.cityPoisCache.find(p => {
+             const pName = normalize(p.name);
+             return pName === searchName || pName.includes(searchName) || searchName.includes(pName);
+        });
+
+        if (match) {
+            const lat = parseFloat(match.latitude as any);
+            const lng = parseFloat(match.longitude as any);
+
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                const graphic = this.addPoint(lat, lng);
+                stopsForRoute.push(graphic);
+            }
+        }
+    }
+
+    if (stopsForRoute.length >= 2) {
+        this.calculateRoute(routeUrl, stopsForRoute);
+    } else if (stopsForRoute.length === 1) {
+        // Dacă e un singur punct, nu avem rută, dar avem durata calculată mai sus
+        console.log("Doar un punct, durata este timpul de vizitare al acelui punct.");
+    }
+}
+
+
 
   removePoints() {
     this.graphicsLayerUserPoints.removeAll();
@@ -289,22 +473,103 @@ export class MapComponent implements OnInit, OnDestroy {
     this.graphicsLayerRoutes.removeAll();
   }
 
-  async calculateRoute(routeUrl: string) {
+  // map.component.ts
+
+  // În map.component.ts
+
+// Asigură-te că ai importul acesta sus:
+// import * as webMercatorUtils from "@arcgis/core/geometry/support/webMercatorUtils";
+
+// Asigură-te că importul este prezent:
+// import * as webMercatorUtils from "@arcgis/core/geometry/support/webMercatorUtils";
+
+// Transformă "HH:mm" în minute (ex: "09:30" -> 570)
+private timeToMinutes(timeStr: string): number {
+  const [hrs, mins] = timeStr.split(':').map(Number);
+  return (hrs * 60) + mins;
+}
+
+async calculateRoute(routeUrl: string, stops: Graphic[]) {
+    console.log("=== CALCUL RUTĂ (Auto-Detect System) ===");
+
+    const validGraphics: Graphic[] = [];
+
+    stops.forEach((s, i) => {
+        const p = s.geometry as Point;
+        
+        // 1. Folosim X și Y (valorile brute), nu latitude/longitude
+        // deoarece latitude/longitude pot fi blocate/clipite de ArcGIS dacă wkid-ul e setat greșit
+        const rawX = p.x;
+        const rawY = p.y;
+
+        // Validare de bază (să nu fie 0 sau NaN)
+        if (!rawX || !rawY || isNaN(rawX) || isNaN(rawY)) {
+            console.warn(`Punctul ${i} invalid:`, rawX, rawY);
+            return;
+        }
+
+        let finalPoint: Point;
+
+        // 2. DETECȚIE INTELIGENTĂ:
+        // Dacă coordonatele sunt uriașe (> 180), înseamnă că sunt DEJA metri (WebMercator).
+        // Dacă sunt mici (< 180), înseamnă că sunt grade (WGS84).
+        const isAlreadyWebMercator = Math.abs(rawX) > 180 || Math.abs(rawY) > 90;
+
+        if (isAlreadyWebMercator) {
+            // CAZ A: Sunt deja metri. Le folosim direct cu wkid: 3857.
+            // Nu mai facem nicio conversie.
+            finalPoint = new Point({
+                x: rawX,
+                y: rawY,
+                spatialReference: { wkid: 3857 }
+            });
+            console.log(`Punct ${i}: Detectat WebMercator (Metri). Păstrat original: ${Math.round(rawX)}, ${Math.round(rawY)}`);
+        } else {
+            // CAZ B: Sunt grade (ex: 44.42). Le convertim.
+            const tempPoint = new Point({
+                longitude: rawX,
+                latitude: rawY,
+                spatialReference: { wkid: 4326 }
+            });
+            finalPoint = webMercatorUtils.geographicToWebMercator(tempPoint) as Point;
+            console.log(`Punct ${i}: Detectat GPS (Grade). Convertit la: ${Math.round(finalPoint.x)}, ${Math.round(finalPoint.y)}`);
+        }
+
+        // 3. Adăugăm punctul procesat
+        validGraphics.push(new Graphic({
+            geometry: finalPoint,
+            attributes: {
+                Name: `Stop_${i + 1}`
+            }
+        }));
+    });
+
+    if (validGraphics.length < 2) {
+        alert("Nu sunt suficiente puncte valide pentru rută.");
+        return;
+    }
+
+    // 4. Parametrii Rutei
     const routeParams = new RouteParameters({
-      stops: new FeatureSet({
-        features: this.graphicsLayerUserPoints.graphics.toArray()
-      }),
-      returnDirections: true
+        stops: new FeatureSet({
+            features: validGraphics,
+            spatialReference: { wkid: 3857 } // Totul este acum standardizat la WebMercator
+        }),
+        returnDirections: true,
+        outSpatialReference: { wkid: 3857 } ,
+        directionsLengthUnits: "kilometers"
     });
 
     try {
-      const data = await route.solve(routeUrl, routeParams);
-      this.displayRoute(data);
-    } catch (error) {
-      console.error("Error calculating route: ", error);
-      alert("Error calculating route");
+        const data = await route.solve(routeUrl, routeParams);
+        console.log("SUCCESS! Rută calculată:", data);
+        this.displayRoute(data);
+    } catch (error: any) {
+        console.error("Eroare ArcGIS:", error);
+        const msgs = error.details?.messages || [];
+        alert("Eroare: " + (msgs.length ? msgs[0] : error.message));
     }
-  }
+}
 
   displayRoute(data: any) {
     for (const result of data.routeResults) {
@@ -335,19 +600,57 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   showDirections(features: any[]) {
+    // 1. Creăm elementul container pentru lista de instrucțiuni
     this.directionsElement = document.createElement("ol");
     this.directionsElement.classList.add("esri-widget", "esri-widget--panel", "esri-directions__scroller");
     this.directionsElement.style.marginTop = "0";
     this.directionsElement.style.padding = "15px 15px 15px 30px";
+    // Poți limita înălțimea dacă lista e prea lungă
+    this.directionsElement.style.maxHeight = "300px"; 
+    this.directionsElement.style.overflowY = "auto";
 
+    // Variabilă locală pentru a aduna distanța totală a rutei
+    let totalLength = 0;
+
+    // 2. Iterăm prin fiecare pas al rutei
     features.forEach((result, i) => {
+      const attributes = result.attributes;
+      const length = attributes.length; // Lungimea segmentului
+
+      // Adunăm la total
+      totalLength += length;
+
+      // Creăm elementul de listă (<li>) pentru UI
       const direction = document.createElement("li");
-      direction.innerHTML = `${result.attributes.text} (${result.attributes.length} miles)`;
+      
+      // Afișăm textul instrucțiunii (ex: "Turn left") și distanța segmentului
+      // Presupunem că ai setat "kilometers" în calculateRoute, deci afișăm "km"
+      direction.innerHTML = `${attributes.text} (<small>${length.toFixed(2)} km</small>)`;
+      
       this.directionsElement.appendChild(direction);
     });
 
+    // 3. Adăugăm panoul în colțul dreapta-sus al hărții
     this.view.ui.empty("top-right");
     this.view.ui.add(this.directionsElement, "top-right");
+
+    // 4. Actualizăm variabila de clasă pentru a afișa Distanța Totală în interfața HTML
+    this.routeDistance = `${totalLength.toFixed(1)} km`;
+
+    // IMPORTANT:
+    // Nu modificăm this.routeDuration aici! 
+    // Aceasta rămâne cu valoarea calculată în visualizeDay() (diferența dintre orele din itinerariu).
+  }
+
+  clearActiveItinerary() {
+    this.activeItinerary = null;
+    this.clearRouter();
+    // Scoatem parametrii din URL fără a da refresh
+    this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { itineraryId: null },
+        queryParamsHandling: 'merge'
+    });
   }
 
   ngOnDestroy() {

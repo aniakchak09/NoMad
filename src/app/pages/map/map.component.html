@@ -1,4 +1,34 @@
 <div class="filter-container">
+
+  <div class="filter-section">
+    <label>Navigare Orașe:</label>
+    <div class="city-buttons">
+      <button (click)="goToCity('bucuresti')">București</button>
+      <button (click)="goToCity('londra')">Londra</button>
+      <button (click)="goToCity('paris')">Paris</button>
+    </div>
+  </div>
+
+  <hr />
+
+  <div class="filter-section itinerary-section" *ngIf="activeItinerary">
+    <div class="itinerary-header">
+        <label>Itinerariu Activ:</label>
+        <button class="close-itinerary" (click)="clearActiveItinerary()" title="Închide itinerariul">x</button>
+    </div>
+    
+    <select (change)="onDayChange($event)" class="day-selector">
+        <option *ngFor="let day of itineraryDays" [value]="day">
+            {{ day | titlecase }} ({{ activeItinerary.schedule[day].length }} stop-uri)
+        </option>
+    </select>
+    
+    <div class="route-info" *ngIf="routeDistance">
+        Dist: {{ routeDistance }} | Timp: {{ routeDuration }}
+    </div>
+  </div>
+
+  <hr *ngIf="activeItinerary" />
   <div class="filter-section">
     <label for="typeFilter">Filtrează după tip: </label>
     <select id="typeFilter" (change)="onFilterChange($event)">
@@ -46,11 +76,8 @@
 
 </div>
 
-<!-- Main container to hold the map and sidebar -->
 <div class="container">
-    <!-- The DIV that will contain the map -->
     <div #mapViewNode class="map-view"></div>
 </div>
 
-<!-- Floating Action Button (FAB) -->
 <button class="fab" (click)="clearRouter()">x</button>
