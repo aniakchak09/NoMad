@@ -1,4 +1,16 @@
 <div class="filter-container">
+
+  <div class="filter-section">
+    <label>Navigare Orașe:</label>
+    <div class="city-buttons">
+      <button (click)="goToCity('bucuresti')">București</button>
+      <button (click)="goToCity('londra')">Londra</button>
+      <button (click)="goToCity('paris')">Paris</button>
+    </div>
+  </div>
+
+  <hr />
+
   <div class="filter-section">
     <label for="typeFilter">Filtrează după tip: </label>
     <select id="typeFilter" (change)="onFilterChange($event)">

@@ -37,6 +37,12 @@ export class MapComponent implements OnInit, OnDestroy {
 
   @ViewChild("mapViewNode", { static: true }) private mapViewEl: ElementRef;
 
+  cityCoordinates: { [key: string]: number[] } = {
+    'bucuresti': [26.1025, 44.4268],
+    'londra': [-0.1276, 51.5072],
+    'paris': [2.3522, 48.8566]
+  };
+
   map: esri.Map;
   view: esri.MapView;
   graphicsLayer: esri.GraphicsLayer;
@@ -279,6 +285,22 @@ export class MapComponent implements OnInit, OnDestroy {
     });
 
     this.graphicsLayerUserPoints.add(pointGraphic);
+  }
+
+  goToCity(city: string) {
+    const coords = this.cityCoordinates[city];
+    if (this.view && coords) {
+      this.view.goTo({
+        center: coords,
+        zoom: 12 // Poți ajusta nivelul de zoom dorit
+      }, {
+        duration: 1000, // Animația durează 1 secundă
+        easing: "ease-in-out" // Efect de accelerare/decelerare
+      });
+      
+      // Opțional: Când schimbi orașul, poți reseta filtrele sau rutele vechi
+      // this.clearRouter(); 
+    }
   }
 
   removePoints() {
