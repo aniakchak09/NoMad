@@ -6,6 +6,7 @@ import { switchMap, map } from "rxjs/operators";
 import { Itinerary, ItineraryService, ScheduledActivity } from "../../services/itinerary.service";
 import { jsPDF } from "jspdf";
 import { autoTable } from "jspdf-autotable";
+import { Router } from '@angular/router';
 
 @Component({
     selector: 'app-home',
@@ -19,7 +20,8 @@ export class HomeComponent implements OnInit {
     constructor(
         private afAuth: AngularFireAuth,
         private db: AngularFireDatabase,
-        private itineraryService: ItineraryService
+        private itineraryService: ItineraryService,
+        private router: Router
     ) {}
 
     ngOnInit(): void {
@@ -120,9 +122,12 @@ export class HomeComponent implements OnInit {
         doc.save(`Itinerary_${item.cityId}_${item.itineraryId.substring(0, 5)}.pdf`);
     }
 
-    async viewOnMap(item: Itinerary) {
-        console.log('Opening Map view...', item.itineraryId);
-        // Implementation later
+    viewOnMap(item: Itinerary) {
+        this.router.navigate(['/map'], { 
+        queryParams: { 
+            itineraryId: item.itineraryId 
+        } 
+    });
     }
 
     // Add this helper method to your HomeComponent class
@@ -134,4 +139,6 @@ export class HomeComponent implements OnInit {
             return numA - numB;
         });
     }
+
+    
 }

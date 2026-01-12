@@ -14,7 +14,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-width: 220px; // Am mărit puțin pentru a acomoda slider-ul
+  min-width: 220px; 
 
   hr {
     border: 0;
@@ -22,17 +22,17 @@
     margin: 5px 0;
   }
 
-  // Adaugă stiluri pentru butoanele de orașe
+  // Stiluri pentru butoanele de orașe
   .city-buttons {
     display: flex;
     gap: 5px;
     justify-content: space-between;
 
     button {
-      flex: 1; // Butoanele vor ocupa spațiu egal
+      flex: 1; 
       padding: 6px 4px;
       cursor: pointer;
-      background-color: #0079c1; // Albastru ArcGIS
+      background-color: #0079c1; 
       color: white;
       border: none;
       border-radius: 4px;
@@ -41,14 +41,81 @@
       transition: background-color 0.2s;
 
       &:hover {
-        background-color: #005a9e; // Albastru mai închis la hover
+        background-color: #005a9e; 
       }
 
       &:active {
-        transform: translateY(1px); // Efect mic de click
+        transform: translateY(1px); 
       }
     }
   }
+
+  // =======================================================
+  // SECȚIUNE NOUĂ: Stiluri pentru Itinerariul Activ
+  // =======================================================
+  .itinerary-section {
+    background-color: #e3f2fd; // Albastru deschis distinctiv
+    border: 1px solid #2196f3; // Bordură albastră
+    padding: 8px;
+    border-radius: 4px;
+    
+    // Suprascriem gap-ul general din filter-section doar aici
+    gap: 8px; 
+
+    .itinerary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      label {
+        color: #0d47a1; // Albastru închis pentru text
+        font-size: 12px;
+      }
+
+      .close-itinerary {
+        background: none;
+        border: none;
+        color: #d32f2f; // Roșu
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 0 5px;
+        line-height: 1;
+        border-radius: 3px;
+
+        &:hover {
+          background-color: #ffcdd2; // Roșu pal la hover
+        }
+      }
+    }
+
+    .day-selector {
+      width: 100%;
+      padding: 4px;
+      border: 1px solid #2196f3;
+      border-radius: 4px;
+      background: white;
+      font-weight: 500;
+      font-size: 12px;
+      cursor: pointer;
+      outline: none;
+
+      &:focus {
+        border-color: #0d47a1;
+      }
+    }
+
+    .route-info {
+      font-size: 11px;
+      color: #1565c0;
+      text-align: center;
+      font-weight: 600;
+      background: rgba(255,255,255,0.5);
+      padding: 2px;
+      border-radius: 2px;
+    }
+  }
+  // =======================================================
 
   .filter-section {
     display: flex;
@@ -64,7 +131,7 @@
     input[type="range"] {
       width: 100%;
       cursor: pointer;
-      accent-color: #0079c1; // Culoarea mânerului slider-ului
+      accent-color: #0079c1; 
     }
 
     .price-labels {
