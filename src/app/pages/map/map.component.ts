@@ -47,7 +47,7 @@ export class MapComponent implements OnInit, OnDestroy {
 
   cityCoordinates: { [key: string]: number[] } = {
     'bucuresti': [26.1025, 44.4268],
-    'londra': [-0.1276, 51.5072],
+    'london': [-0.1276, 51.5072],
     'paris': [2.3522, 48.8566]
   };
 
@@ -335,18 +335,24 @@ export class MapComponent implements OnInit, OnDestroy {
   }
 
   goToCity(city: string) {
-    const coords = this.cityCoordinates[city];
+    if (!city) return;
+
+    // 1. Normalizăm cheia (totul cu litere mici) pentru a potrivi cu dicționarul
+    const cityKey = city.toLowerCase();
+    const coords = this.cityCoordinates[cityKey];
+
     if (this.view && coords) {
+      console.log(`Centrare hartă pe ${city} [${coords}]`);
+      
       this.view.goTo({
         center: coords,
-        zoom: 12 // Poți ajusta nivelul de zoom dorit
+        zoom: 12 // Poți mări la 13 sau 14 pentru a fi mai aproape de centru
       }, {
-        duration: 1000, // Animația durează 1 secundă
-        easing: "ease-in-out" // Efect de accelerare/decelerare
+        duration: 1500, // Animație puțin mai lungă și fluidă
+        easing: "ease-in-out"
       });
-      
-      // Opțional: Când schimbi orașul, poți reseta filtrele sau rutele vechi
-      // this.clearRouter(); 
+    } else {
+      console.warn(`Nu am găsit coordonate pentru orașul: ${city} (Cheie: ${cityKey})`);
     }
   }
 
