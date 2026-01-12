@@ -398,48 +398,64 @@ export class MapComponent implements OnInit, OnDestroy {
     this.clearRouter();
 
     const activities = this.activeItinerary.schedule[dayKey];
+    
+    // --- CALCUL DURATĂ ITINERARIU (MODIFICARE NOUĂ) ---
+    if (activities.length > 0) {
+        // Luăm ora de start a primei activități
+        const firstActivity = activities[0];
+        // Luăm ora de final a ultimei activități
+        const lastActivity = activities[activities.length - 1];
+
+        const startMins = this.timeToMinutes(firstActivity.startTime);
+        const endMins = this.timeToMinutes(lastActivity.endTime);
+
+        const totalDurationMins = endMins - startMins;
+
+        // Formatăm afișarea (ex: 5h 30m)
+        const hrs = Math.floor(totalDurationMins / 60);
+        const mins = totalDurationMins % 60;
+        this.routeDuration = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    }
+    // --------------------------------------------------
+
     const routeUrl = "https://route-api.arcgis.com/arcgis/rest/services/World/Route/NAServer/Route_World";
 
     console.log(`Visualizing ${dayKey} with ${activities.length} stops`);
 
+    // ... restul codului (normalizare, loop prin activități, etc.) ...
+    
     const normalize = (str: string) => str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
 
-    // ARRAY NOU PENTRU STOCAREA PUNCTELOR DE RUTĂ
     const stopsForRoute: Graphic[] = [];
-
+    // ... restul funcției rămâne neschimbat până la apelul calculateRoute ...
+    
     for (const activity of activities) {
-    const searchName = normalize(activity.poiName);
+        // ... logica ta de căutare POI ...
+         const searchName = normalize(activity.poiName);
 
-    const match = this.cityPoisCache.find(p => {
-         const pName = normalize(p.name);
-         return pName === searchName || pName.includes(searchName) || searchName.includes(pName);
-    });
+        const match = this.cityPoisCache.find(p => {
+             const pName = normalize(p.name);
+             return pName === searchName || pName.includes(searchName) || searchName.includes(pName);
+        });
 
-    if (match) {
-        // Conversie explicită la număr
-        const lat = parseFloat(match.latitude as any);
-        const lng = parseFloat(match.longitude as any);
+        if (match) {
+            const lat = parseFloat(match.latitude as any);
+            const lng = parseFloat(match.longitude as any);
 
-        // Verificăm dacă avem coordonate reale
-        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            const graphic = this.addPoint(lat, lng);
-            stopsForRoute.push(graphic);
-        } else {
-            console.warn(`POI găsit dar fără coordonate valide: ${activity.poiName}`, match);
+            if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+                const graphic = this.addPoint(lat, lng);
+                stopsForRoute.push(graphic);
+            }
         }
-    } else {
-        console.warn(`Nu am găsit coordonate pentru: ${activity.poiName}`);
     }
-}
 
-    // Verificăm lungimea listei și apelăm cu noii parametri
     if (stopsForRoute.length >= 2) {
-        // Trimitem lista explicită de grafice
         this.calculateRoute(routeUrl, stopsForRoute);
     } else if (stopsForRoute.length === 1) {
-        alert("Această zi are doar un punct valid pe hartă, nu se poate crea un traseu.");
+        // Dacă e un singur punct, nu avem rută, dar avem durata calculată mai sus
+        console.log("Doar un punct, durata este timpul de vizitare al acelui punct.");
     }
-  }
+}
 
 
 
@@ -460,6 +476,12 @@ export class MapComponent implements OnInit, OnDestroy {
 
 // Asigură-te că importul este prezent:
 // import * as webMercatorUtils from "@arcgis/core/geometry/support/webMercatorUtils";
+
+// Transformă "HH:mm" în minute (ex: "09:30" -> 570)
+private timeToMinutes(timeStr: string): number {
+  const [hrs, mins] = timeStr.split(':').map(Number);
+  return (hrs * 60) + mins;
+}
 
 async calculateRoute(routeUrl: string, stops: Graphic[]) {
     console.log("=== CALCUL RUTĂ (Auto-Detect System) ===");
@@ -528,7 +550,8 @@ async calculateRoute(routeUrl: string, stops: Graphic[]) {
             spatialReference: { wkid: 3857 } // Totul este acum standardizat la WebMercator
         }),
         returnDirections: true,
-        outSpatialReference: { wkid: 3857 } 
+        outSpatialReference: { wkid: 3857 } ,
+        directionsLengthUnits: "kilometers"
     });
 
     try {
@@ -571,34 +594,46 @@ async calculateRoute(routeUrl: string, stops: Graphic[]) {
   }
 
   showDirections(features: any[]) {
+    // 1. Creăm elementul container pentru lista de instrucțiuni
     this.directionsElement = document.createElement("ol");
     this.directionsElement.classList.add("esri-widget", "esri-widget--panel", "esri-directions__scroller");
     this.directionsElement.style.marginTop = "0";
     this.directionsElement.style.padding = "15px 15px 15px 30px";
+    // Poți limita înălțimea dacă lista e prea lungă
+    this.directionsElement.style.maxHeight = "300px"; 
+    this.directionsElement.style.overflowY = "auto";
 
+    // Variabilă locală pentru a aduna distanța totală a rutei
+    let totalLength = 0;
+
+    // 2. Iterăm prin fiecare pas al rutei
     features.forEach((result, i) => {
+      const attributes = result.attributes;
+      const length = attributes.length; // Lungimea segmentului
+
+      // Adunăm la total
+      totalLength += length;
+
+      // Creăm elementul de listă (<li>) pentru UI
       const direction = document.createElement("li");
-      direction.innerHTML = `${result.attributes.text} (${result.attributes.length} miles)`;
+      
+      // Afișăm textul instrucțiunii (ex: "Turn left") și distanța segmentului
+      // Presupunem că ai setat "kilometers" în calculateRoute, deci afișăm "km"
+      direction.innerHTML = `${attributes.text} (<small>${length.toFixed(2)} km</small>)`;
+      
       this.directionsElement.appendChild(direction);
     });
 
+    // 3. Adăugăm panoul în colțul dreapta-sus al hărții
     this.view.ui.empty("top-right");
     this.view.ui.add(this.directionsElement, "top-right");
 
-    // Calculăm totaluri pentru UI
-    let totalMiles = 0;
-    let totalMinutes = 0;
-    
-    features.forEach((result) => {
-        totalMiles += result.attributes.length;
-        totalMinutes += result.attributes.time;
-    });
+    // 4. Actualizăm variabila de clasă pentru a afișa Distanța Totală în interfața HTML
+    this.routeDistance = `${totalLength.toFixed(1)} km`;
 
-    this.routeDistance = `${totalMiles.toFixed(1)} miles`;
-    // Conversie simplă minute -> ore:minute
-    const hrs = Math.floor(totalMinutes / 60);
-    const mins = Math.round(totalMinutes % 60);
-    this.routeDuration = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+    // IMPORTANT:
+    // Nu modificăm this.routeDuration aici! 
+    // Aceasta rămâne cu valoarea calculată în visualizeDay() (diferența dintre orele din itinerariu).
   }
 
   clearActiveItinerary() {
