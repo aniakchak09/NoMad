@@ -41,10 +41,10 @@ export class ItineraryService {
    */
   generateSchedule(pois: Poi[], prefs: Preferences): Record<string, ScheduledActivity[]> {
     const days = prefs.days || 1;
-    const targetMaxMinutes = 9 * 60; // 9 hours of activity limit per day
-    let remainingBudget = prefs.budget || Infinity; 
-    
-    // Sort by rating as the primary priority
+    const targetMinMinutes = 6 * 60; // 6 hours
+    const targetMaxMinutes = 8 * 60; // 8 hours
+    const breakDuration = 60;        // 60 min break
+
     let availablePois = [...pois].sort((a, b) => (Number(b.rating || 0) - Number(a.rating || 0)));
     const schedule: Record<string, ScheduledActivity[]> = {};
 
@@ -53,87 +53,59 @@ export class ItineraryService {
       const daySchedule: ScheduledActivity[] = [];
       let currentTime = 9 * 60; // Start at 09:00 AM
       let lastPoi: Poi | null = null;
+      let breakTaken = false;
+      let totalDayMinutes = 0;
+      let visitDuration = 60;
+      let remainingBudget = prefs.budget || Infinity;
 
-      // Use a manual loop to allow skipping items that don't fit constraints
-      for (let i = 0; i < availablePois.length; i++) {
-        const poi = availablePois[i];
+      while (totalDayMinutes + visitDuration <= targetMaxMinutes && availablePois.length > 0) {
+        // 1. Find the nearest POI to the current location to minimize travel
+        const nextIndex = this.findNearestPoiIndex(lastPoi, availablePois);
+        const currentPoi = availablePois.splice(nextIndex, 1)[0];
+
+        const cost = this.estimateTotalCost([currentPoi]);
+        if (cost > remainingBudget) {
+          availablePois.splice(nextIndex, 1);
+          continue; 
+        }
+
+        availablePois.splice(nextIndex, 1);
+        remainingBudget -= cost;
+
+        const travelTime = lastPoi ? this.calculateTravelTime(lastPoi, currentPoi) : 0;
+        visitDuration = currentPoi.estimatedTime || 60;
         
-        // Use the POI's estimatedTime (default to 60 min if missing)
-        const visitDuration = poi.estimatedTime || 60; 
-        const cost = this.getPoiCost(poi);
-        const travelTime = lastPoi ? this.calculateTravelTime(lastPoi, poi) : 0;
-
-        console.log(`Evaluating POI: ${poi.name}, Cost: ${cost}, Visit Duration: ${visitDuration}, Travel Time: ${travelTime}`);
-        
-        const start = currentTime + travelTime;
-        const end = start + visitDuration;
-
-        // --- VALIDATION GATES ---
-        
-        // 1. Budget Check
-        if (cost > remainingBudget) continue; 
-
-        // 2. Opening Hours Check (uses the string from your POI data)
-        if (!this.isWithinOpeningHours(start, end, poi.openingHours)) continue;
-
-        // 3. Daily Time Check (Total day length)
-        if ((end - (9 * 60)) > targetMaxMinutes) continue;
-
-        // --- SUCCESS: ADD TO SCHEDULE ---
+        // Update previous activity with travel time
         if (daySchedule.length > 0) {
           daySchedule[daySchedule.length - 1].travelTimeAfter = travelTime;
         }
 
+        const start = currentTime + travelTime;
+        const end = start + visitDuration;
+
         daySchedule.push({
-          poiName: poi.name,
+          poiName: currentPoi.name,
           startTime: this.minutesToTime(start),
           endTime: this.minutesToTime(end)
         });
 
-        // Update state for the next iteration
         currentTime = end;
-        remainingBudget -= cost;
-        lastPoi = poi;
-        
-        // Remove this POI so it's not reused on another day
-        availablePois.splice(i, 1);
-        i--; 
+        totalDayMinutes = currentTime - (9 * 60);
+        lastPoi = currentPoi;
 
-        // Check against user's max activities limit
-        if (prefs.maxActivitiesPerDay && daySchedule.length >= prefs.maxActivitiesPerDay) break;
+        // 2. Insert a break if it's past noon and we haven't rested
+        if (!breakTaken && totalDayMinutes > (4 * 60)) {
+          currentTime = Math.min(currentTime + breakDuration, 18 * 60); // cap at 18:00
+          daySchedule[daySchedule.length - 1].note = "Lunch Break / Rest";
+          breakTaken = true;
+        }
+
+        // Stop if adding another POI would exceed our 9-hour limit
+        if (totalDayMinutes + visitDuration > targetMaxMinutes) break;
       }
       schedule[dayKey] = daySchedule;
     }
     return schedule;
-  }
-
-  // Converts "HH:mm" to total minutes from midnight
-  private timeToMinutes(timeStr: string): number {
-    const [hrs, mins] = timeStr.split(':').map(Number);
-    return (hrs * 60) + mins;
-  }
-
-  // Checks if the activity fits within the POI's opening hours
-  private isWithinOpeningHours(start: number, end: number, hoursStr?: string): boolean {
-    if (!hoursStr || !hoursStr.includes('-')) return true; // Assume 24/7 if format is missing
-    
-    const [openStr, closeStr] = hoursStr.split('-');
-    const openTime = this.timeToMinutes(openStr.trim());
-    const closeTime = this.timeToMinutes(closeStr.trim());
-
-    return start >= openTime && end <= closeTime;
-  }
-
-  // Logic extracted from your estimateTotalCost method
-  private getPoiCost(p: Poi): number {
-    const priceRangeString = String(p.priceRange || '').trim();
-    if (!priceRangeString.includes('-')) {
-      return parseFloat(priceRangeString) || 0;
-    }
-    const parts = priceRangeString.split('-');
-    const lower = parseFloat(parts[0]) || 0;
-    const upper = parseFloat(parts[1]) || 0;
-    return (lower + upper) / 2;
   }
 
   private mercatorToLatLon(x: number, y: number): { lat: number; lon: number } {
@@ -168,7 +140,7 @@ export class ItineraryService {
               Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const dist = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    const travel = Math.round(dist * 4.5 + 10); // to be adjusted
+    const travel = Math.round(dist * 6.5 + 10); // to be adjusted
     return Math.min(travel, 90);
   }
 
